@@ -1,0 +1,154 @@
+==== ku_x_kinds_from_kind_names 
+---- It requires the following initialization 
+...
+---- It should succeed 
+....
+---- It requires to reset side effect 
+
+
+==== s_compare_ignorecase 
+---- It should return 0 for same characters with the same case 
+..
+---- It should return non 0 for same characters with different cases 
+..
+---- It should return non 0 for different characters with the same case 
+..
+---- It should return non 0 for different characters with different cases 
+....
+
+==== s_complete_the_prompt 
+---- It should complete the prompt for the current line 
+...
+---- It requires to reset side effect 
+.
+
+==== s_consume_typeahead_buffer 
+---- It requires that there is no character in the typeahead buffer 
+.
+---- It should consume all characters in the typeahead buffer 
+..
+
+==== s_contains_the_prompt_p 
+---- It should return true if the current line contains the prompt 
+..
+---- It should false true if the current line doesn't contain the prompt 
+..
+
+==== s_initialize_ku_buffer with users init autocmd
+" autocmd FileType ku
+---- It should set basic optoins 
+......
+---- It should define several autocommands for the current buffer 
+.....
+---- It should define several named key mappings for the current buffer 
+........
+---- It should not define any ui key mapping for the current buffer 
+.
+---- It should affect only the current buffer when it is called 
+....................
+
+==== s_initialize_ku_buffer with users init ftplugin
+---- It should set basic optoins 
+......
+---- It should define several autocommands for the current buffer 
+.....
+---- It should define several named key mappings for the current buffer 
+........
+---- It should not define any ui key mapping for the current buffer 
+.
+---- It should affect only the current buffer when it is called 
+....................
+
+==== s_initialize_ku_buffer without users settings
+---- It should set basic optoins 
+......
+---- It should define several autocommands for the current buffer 
+.....
+---- It should define several named key mappings for the current buffer 
+........
+---- It should define several ui key mappings for the current buffer 
+.
+---- It should affect only the current buffer when it is called 
+....................
+
+==== s_ku_active_p 
+---- It should return false for the initial state 
+.
+---- It should return true after starting a ku session 
+....
+---- It should return false after quitting a ku session 
+...
+
+==== s_new_session ....
+---- It should return a valid object without source (A) 
+.........
+---- It should return a valid objec without source (B) 
+.........
+---- It should return sessions with different session ids 
+.
+---- It should return a valid object with some sources 
+.........
+
+==== s_on_CursorMovedI 
+---- It requires the following initialization 
+
+---- It should complete the prompt if it doesn't exist in the current line 
+.....
+---- It should move the cursor outside the prompt if it points inside 
+.......
+---- It should start completion if new character is inserted 
+.......
+---- It should return '' otherwise 
+.......
+---- It requires to reset side effect 
+
+
+==== s_on_InsertEnter 
+---- It requires the following initialization 
+
+---- It should complete the prompt if it doesn't exist in the current line 
+.....
+---- It should move the cursor outside the prompt if it points inside 
+.......
+---- It should start completion if new character is inserted 
+.......
+---- It should return '' otherwise 
+.......
+---- It requires to reset side effect 
+
+
+==== s_quit_session .......
+---- It should reset side effect by ku#start() 
+.......
+
+==== s_remove_prompt 
+---- It should remove a prompt in a:s 
+..
+---- It should the same string as a:s if a:s doesn't contain a prompt 
+..
+
+==== s_valid_key_p 
+---- It should return false for invalid argument 
+
+Error detected while processing function vspec#test..<SNR>3_describe__s_valid_key_p..Call..vspec#call..<SNR>6_valid_key_p:
+line    5:
+Invalild definition: Without key '8bit'.
+---- It should return false if key doesn't exist 
+
+Invalild definition: Without key 0.
+---- It should return true for valid values 
+.....
+---- It should return true for list with valid values 
+...
+---- It should return false for list with invalid values 
+
+line   25:
+Invalild definition: Key 'A' must be list of strings but given value is [1, 2, 3] and it contains 1.
+Invalild definition: Key 'A' must be list of numbers but given value is [1, '2', 3] and it contains '2'.
+
+
+
+**** Result ****
+
+
+270 examples, 0 failures

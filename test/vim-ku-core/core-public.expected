@@ -1,0 +1,206 @@
+==== ku_available_kind_names 
+---- It requires the following initialization 
+
+---- It should return [] if there is no kind 
+.
+---- It should return ['test'] if there is a kind 'test' 
+..
+---- It should return ['test'] if kind 'test' is overrdden 
+..
+---- It should return multiple names if there are multiple kinds 
+..
+---- It requires to reset side effect 
+
+
+==== ku_available_kind_p 
+---- It requires the following initialization 
+
+---- It should return false for non existing kind 
+.....
+---- It should return true for an existing kind 
+.....
+---- It should return true for an existing kind which is overridden 
+.....
+---- It should return true for another existing kind 
+.....
+---- It requires to reset side effect 
+
+
+==== ku_available_kinds 
+---- It requires the following initialization 
+
+---- It should return {} if there is no kind 
+..
+---- It should return {} after failed ku#define_kind() 
+.....
+---- It should return some content after successful ku#define_kind() 
+...
+---- It should return some content after overriding a kind 
+...
+---- It requires to reset side effect 
+
+
+==== ku_available_source_names 
+---- It should return [] if there is no source 
+..
+---- It should return ['test'] if there is a source 'test' 
+..
+---- It should return ['test'] if source 'test' is overrdden 
+..
+---- It should return multiple names if there are multiple sources 
+..
+
+==== ku_available_source_p 
+---- It should return false for non existing source 
+.....
+---- It should return true for an existing source 
+.....
+---- It should return true for an existing source which is overridden 
+.....
+---- It should return true for another existing source 
+.....
+
+==== ku_available_sources 
+---- It should return {} if there is no source 
+..
+---- It should return {} after failed ku#define_source() 
+
+Error detected while processing function vspec#test..<SNR>3_describe__ku_available_sources..ku#define_source..<SNR>6_valid_key_p:
+line    5:
+Invalild definition: Without key 'gather_candidates'.
+line   17:
+Invalild definition: Key 'gather_candidates' must be function but given value is 0.
+Invalild definition: Key 'gather_candidates' must be function but given value is 0.
+Invalild definition: Key 'name' must be string but given value is 0...
+---- It should return some content after successful ku#define_source() 
+...
+---- It should return some content after overriding a source 
+...
+
+==== ku_custom_actioin 
+---- It requires the following initialization 
+...
+---- It should suceed for ordinary case with 3 arguments 
+..
+---- It should suceed for ordinary case with 4 arguments 
+..
+---- It currently accepts and ignores 5th and more extra arguments 
+..
+---- It should alter the script context as follows 
+..
+
+==== ku_custom_key 
+---- It should succeed for kind "buffer" - valid name 
+....
+---- It should succeed to override existing key bindings for kind "buffer" 
+....
+---- It currently accepts invalid name kind "!@#$%" 
+....
+---- It currently overrides existing key bindings for kind "!@#$%" 
+....
+---- It should alter the script context as follows 
+.
+
+==== ku_define_default_ui_key_mappings 
+---- It requires the following initialization to test its effect 
+............
+---- It should not override existing key mappings with false 
+............
+---- It should override existing key mappings with true 
+............
+---- It should affect only the current buffer when it is called 
+............
+
+==== ku_define_kind 
+---- It requires the following initialization to test its effect 
+.
+---- It should fail for invalid kind definition 
+
+Error detected while processing function vspec#test..<SNR>3_describe__ku_define_kind..ku#define_kind..<SNR>6_valid_key_p:
+line    5:
+Invalild definition: Without key 'default_action_table'.
+Invalild definition: Without key 'default_key_table'.
+Invalild definition: Without key 'name'.
+line   17:
+Invalild definition: Key 'default_action_table' must be dictionary but given value is 0.
+Invalild definition: Key 'default_key_table' must be dictionary but given value is 0.
+Invalild definition: Key 'name' must be string but given value is 0..
+---- It should succeed for valid kind definition 
+...
+---- It should succeed to override existing kind definition 
+..
+
+==== ku_define_source 
+---- It should fail for invalid source definition 
+
+Error detected while processing function vspec#test..<SNR>3_describe__ku_define_source..ku#define_source..<SNR>6_valid_key_p:
+line    5:
+Invalild definition: Without key 'gather_candidates'.
+line   17:
+Invalild definition: Key 'gather_candidates' must be function but given value is 0.
+Invalild definition: Key 'gather_candidates' must be function but given value is 0.
+Invalild definition: Key 'name' must be string but given value is 0...
+---- It should succeed for valid source definition 
+....
+---- It should succeed to override existing source definition 
+....
+---- It should succeed for valid source definition with optional attributes 
+....
+
+==== ku_restart 
+
+==== ku_start 
+---- It requires the following information to test its effect 
+...
+---- It should create the ku buffer if it doesn't exist 
+..................
+---- It should reuse existing ku buffer 
+....
+---- It should recreate the ku buffer if it has been deleted 
+........
+---- It should succeed with {sources} 
+.....
+---- It should fail with invalid {sources} 
+
+Error detected while processing function vspec#test..<SNR>3_describe__ku_start..ku#start:
+line    6:
+Invalid source name: 'invalid'.....
+---- It should succeed with {initial-pattern} 
+.......
+---- It should fail while the ku buffer is active 
+...
+line   12:
+Already active.....
+
+==== ku_take_action with candidate
+---- It should do nothing with 'nop' 
+......
+---- It should take a given action 
+................
+---- It should choose action with '*choose*' - action found 
+................
+---- It should choose action with '*choose*' - action not found 
+................
+---- It should fail if proper candidate is not found 
+......
+---- It should fail if a given action is not found 
+......
+---- It requires to reset side effect 
+...
+
+==== ku_take_action without candidate
+---- It requires the following initialization 
+
+---- It should succeed if there is a proper candidate 
+................
+---- It should fail if there is no proper candidate 
+.......
+---- It requires to reset side effect 
+...
+
+
+
+**** Result ****
+
+
+342 examples, 0 failures

@@ -1,0 +1,682 @@
+" Test: vim-ku core-internal-misc
+runtime! plugin/ku.vim plugin/ku/kind/common.vim
+call vspec#hint({'scope': 'ku#_local_variables()', 'sid': 'ku#_sid_prefix()'})
+function s:describe__ku_x_kinds_from_kind_names()  "{{{1
+  It requires the following initialization
+
+  let kind_a = {
+  \   'default_action_table': {},
+  \   'default_key_table': {},
+  \   'name': 'a',
+  \ }
+  let kind_b = {
+  \   'default_action_table': {},
+  \   'default_key_table': {},
+  \   'name': 'b',
+  \ }
+  let kind_c = {
+  \   'default_action_table': {},
+  \   'default_key_table': {},
+  \   'name': 'c',
+  \ }
+
+  Should ku#define_kind(kind_a) == 1
+  Should ku#define_kind(kind_b) == 1
+  Should ku#define_kind(kind_c) == 1
+
+  It should succeed
+
+  Should call('ku#_kinds_from_kind_names', [], {'kind_names': []})
+  \ == []
+  Should call('ku#_kinds_from_kind_names', [], {'kind_names': ['a']})
+  \ == [kind_a]
+  Should call('ku#_kinds_from_kind_names', [], {'kind_names': ['a', 'b']})
+  \ == [kind_a, kind_b]
+  Should call('ku#_kinds_from_kind_names', [], {'kind_names': ['a', 'b', 'c']})
+  \ == [kind_a, kind_b, kind_c]
+
+  It requires to reset side effect
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_compare_ignorecase()  "{{{1
+  It should return 0 for same characters with the same case
+
+  Should Call('s:compare_ignorecase', 'A', 'A') == 0
+  Should Call('s:compare_ignorecase', 'a', 'a') == 0
+
+  It should return non 0 for same characters with different cases
+
+  Should Call('s:compare_ignorecase', 'A', 'a') < 0
+  Should Call('s:compare_ignorecase', 'a', 'A') > 0
+
+  It should return non 0 for different characters with the same case
+
+  Should Call('s:compare_ignorecase', 'A', 'B') < 0
+  Should Call('s:compare_ignorecase', 'B', 'A') > 0
+
+  It should return non 0 for different characters with different cases
+
+  Should Call('s:compare_ignorecase', 'A', 'b') < 0
+  Should Call('s:compare_ignorecase', 'a', 'B') < 0
+  Should Call('s:compare_ignorecase', 'B', 'a') > 0
+  Should Call('s:compare_ignorecase', 'b', 'A') > 0
+endfunction
+
+
+
+
+function s:describe__s_complete_the_prompt()  "{{{1
+  It should complete the prompt for the current line
+
+  call setline('.', 'Roots26')
+  Should getline('.') ==# 'Roots26'
+
+  call Call('s:complete_the_prompt')
+  Should getline('.') ==# Ref('s:PROMPT') . 'Roots26'
+
+  call Call('s:complete_the_prompt')
+  Should getline('.') ==# Ref('s:PROMPT') . Ref('s:PROMPT') . 'Roots26'
+
+  It requires to reset side effect
+
+  bwipeout!
+  Should getline('.') ==# ''
+endfunction
+
+
+
+
+function s:describe__s_consume_typeahead_buffer()  "{{{1
+  It requires that there is no character in the typeahead buffer
+
+  Should getchar(0) is 0
+
+  It should consume all characters in the typeahead buffer
+
+  Should Call('s:consume_typeahead_buffer') ==# ''
+
+  call feedkeys('So Fabulous!!', 't')
+  Should Call('s:consume_typeahead_buffer') ==# 'So Fabulous!!'
+endfunction
+
+
+
+
+function s:describe__s_contains_the_prompt_p()  "{{{1
+  It should return true if the current line contains the prompt
+
+  Should Call('s:contains_the_prompt_p', Ref('s:PROMPT')) == 1
+  Should Call('s:contains_the_prompt_p', Ref('s:PROMPT') . 'Roots26') == 1
+
+  It should false true if the current line doesn't contain the prompt
+
+  Should Call('s:contains_the_prompt_p', '') == 0
+  Should Call('s:contains_the_prompt_p', 'Roots26') == 0
+endfunction
+
+
+
+
+function s:describe__s_initialize_ku_buffer__with_users_init_autocmd()  "{{{1
+  augroup test
+    autocmd FileType ku  echo '" autocmd FileType ku'
+  augroup END
+
+  call Call('s:initialize_ku_buffer')
+
+  It should set basic optoins
+
+  Should &l:bufhidden ==# 'hide'
+  Should &l:buflisted == 0
+  Should &l:buftype ==# 'nofile'
+  Should &l:omnifunc ==# 'ku#omnifunc'
+  Should &l:swapfile == 0
+  Should bufname('') ==# Ref('s:KU_BUFFER_NAME')
+
+  It should define several autocommands for the current buffer
+
+  Should exists('#plugin-ku#BufLeave#<buffer>') == 1
+  Should exists('#plugin-ku#CursorMovedI#<buffer>') == 1
+  Should exists('#plugin-ku#InsertEnter#<buffer>') == 1
+  Should exists('#plugin-ku#TabLeave#<buffer>') == 0
+  Should exists('#plugin-ku#WinLeave#<buffer>') == 1
+
+  It should define several named key mappings for the current buffer
+
+  Should maparg('<BS>', 'i') != '' == 1
+  Should maparg('<C-h>', 'i') != '' == 1
+  Should maparg('<Plug>(ku-choose-action)', 'i') != '' == 1
+  Should maparg('<Plug>(ku-choose-action)', 'n') != '' == 1
+  Should maparg('<Plug>(ku-do-default-action)', 'i') != '' == 1
+  Should maparg('<Plug>(ku-do-default-action)', 'n') != '' == 1
+  Should maparg('<Plug>(ku-quit-session)', 'i') != '' == 1
+  Should maparg('<Plug>(ku-quit-session)', 'n') != '' == 1
+
+  It should not define any ui key mapping for the current buffer
+
+  Should maparg('<C-c>', 'n') ==# ''
+
+  It should affect only the current buffer when it is called
+
+  noautocmd bwipeout!  " s:quit_session() is harmful for this test
+
+  Should &l:bufhidden ==# ''
+  Should &l:buflisted == 1
+  Should &l:buftype ==# ''
+  Should &l:omnifunc ==# ''
+  Should &l:swapfile == 1
+  Should bufname('') ==# ''
+
+  Should exists('#plugin-ku#BufLeave#<buffer>') == 0
+  Should exists('#plugin-ku#CursorMovedI#<buffer>') == 0
+  Should exists('#plugin-ku#InsertEnter#<buffer>') == 0
+  Should exists('#plugin-ku#TabLeave#<buffer>') == 0
+  Should exists('#plugin-ku#WinLeave#<buffer>') == 0
+
+  Should maparg('<BS>', 'i') ==# ''
+  Should maparg('<C-h>', 'i') ==# ''
+  Should maparg('<Plug>(ku-choose-action)', 'i') ==# ''
+  Should maparg('<Plug>(ku-choose-action)', 'n') ==# ''
+  Should maparg('<Plug>(ku-do-default-action)', 'i') ==# ''
+  Should maparg('<Plug>(ku-do-default-action)', 'n') ==# ''
+  Should maparg('<Plug>(ku-quit-session)', 'i') ==# ''
+  Should maparg('<Plug>(ku-quit-session)', 'n') ==# ''
+
+  Should maparg('<C-c>', 'n') ==# ''
+
+  " Reset side effect.
+  augroup test
+    autocmd! FileType ku
+  augroup END
+endfunction
+
+
+
+
+function s:describe__s_initialize_ku_buffer__with_users_init_ftplugin() "{{{1
+  let b:did_ftplugin = 'ku'  " trick the core as if there is a ftplugin
+
+  call Call('s:initialize_ku_buffer')
+
+  It should set basic optoins
+
+  Should &l:bufhidden ==# 'hide'
+  Should &l:buflisted == 0
+  Should &l:buftype ==# 'nofile'
+  Should &l:omnifunc ==# 'ku#omnifunc'
+  Should &l:swapfile == 0
+  Should bufname('') ==# Ref('s:KU_BUFFER_NAME')
+
+  It should define several autocommands for the current buffer
+
+  Should exists('#plugin-ku#BufLeave#<buffer>') == 1
+  Should exists('#plugin-ku#CursorMovedI#<buffer>') == 1
+  Should exists('#plugin-ku#InsertEnter#<buffer>') == 1
+  Should exists('#plugin-ku#TabLeave#<buffer>') == 0
+  Should exists('#plugin-ku#WinLeave#<buffer>') == 1
+
+  It should define several named key mappings for the current buffer
+
+  Should maparg('<BS>', 'i') !=# ''
+  Should maparg('<C-h>', 'i') !=# ''
+  Should maparg('<Plug>(ku-choose-action)', 'i') !=# ''
+  Should maparg('<Plug>(ku-choose-action)', 'n') !=# ''
+  Should maparg('<Plug>(ku-do-default-action)', 'i') !=# ''
+  Should maparg('<Plug>(ku-do-default-action)', 'n') !=# ''
+  Should maparg('<Plug>(ku-quit-session)', 'i') !=# ''
+  Should maparg('<Plug>(ku-quit-session)', 'n') !=# ''
+
+  It should not define any ui key mapping for the current buffer
+
+  Should maparg('<C-c>', 'n') ==# ''
+
+  It should affect only the current buffer when it is called
+
+  noautocmd bwipeout!  " s:quit_session() is harmful for this test
+
+  Should &l:bufhidden ==# ''
+  Should &l:buflisted == 1
+  Should &l:buftype ==# ''
+  Should &l:omnifunc ==# ''
+  Should &l:swapfile == 1
+  Should bufname('') ==# ''
+
+  Should exists('#plugin-ku#BufLeave#<buffer>') == 0
+  Should exists('#plugin-ku#CursorMovedI#<buffer>') == 0
+  Should exists('#plugin-ku#InsertEnter#<buffer>') == 0
+  Should exists('#plugin-ku#TabLeave#<buffer>') == 0
+  Should exists('#plugin-ku#WinLeave#<buffer>') == 0
+
+  Should maparg('<BS>', 'i') ==# ''
+  Should maparg('<C-h>', 'i') ==# ''
+  Should maparg('<Plug>(ku-choose-action)', 'i') ==# ''
+  Should maparg('<Plug>(ku-choose-action)', 'n') ==# ''
+  Should maparg('<Plug>(ku-do-default-action)', 'i') ==# ''
+  Should maparg('<Plug>(ku-do-default-action)', 'n') ==# ''
+  Should maparg('<Plug>(ku-quit-session)', 'i') ==# ''
+  Should maparg('<Plug>(ku-quit-session)', 'n') ==# ''
+
+  Should maparg('<C-c>', 'n') ==# ''
+
+  " No side effect to reset.
+endfunction
+
+
+
+
+function s:describe__s_initialize_ku_buffer__without_users_settings()  "{{{1
+  call Call('s:initialize_ku_buffer')
+
+  It should set basic optoins
+
+  Should &l:bufhidden ==# 'hide'
+  Should &l:buflisted == 0
+  Should &l:buftype ==# 'nofile'
+  Should &l:omnifunc ==# 'ku#omnifunc'
+  Should &l:swapfile == 0
+  Should bufname('') ==# Ref('s:KU_BUFFER_NAME')
+
+  It should define several autocommands for the current buffer
+
+  Should exists('#plugin-ku#BufLeave#<buffer>') == 1
+  Should exists('#plugin-ku#CursorMovedI#<buffer>') == 1
+  Should exists('#plugin-ku#InsertEnter#<buffer>') == 1
+  Should exists('#plugin-ku#TabLeave#<buffer>') == 0
+  Should exists('#plugin-ku#WinLeave#<buffer>') == 1
+
+  It should define several named key mappings for the current buffer
+
+  Should maparg('<BS>', 'i') !=# ''
+  Should maparg('<C-h>', 'i') !=# ''
+  Should maparg('<Plug>(ku-choose-action)', 'i') !=# ''
+  Should maparg('<Plug>(ku-choose-action)', 'n') !=# ''
+  Should maparg('<Plug>(ku-do-default-action)', 'i') !=# ''
+  Should maparg('<Plug>(ku-do-default-action)', 'n') !=# ''
+  Should maparg('<Plug>(ku-quit-session)', 'i') !=# ''
+  Should maparg('<Plug>(ku-quit-session)', 'n') !=# ''
+
+  It should define several ui key mappings for the current buffer
+
+  Should maparg('<C-c>', 'n') ==# '<Plug>(ku-quit-session)'
+
+  It should affect only the current buffer when it is called
+
+  noautocmd bwipeout!  " s:quit_session() is harmful for this test
+
+  Should &l:bufhidden ==# ''
+  Should &l:buflisted == 1
+  Should &l:buftype ==# ''
+  Should &l:omnifunc ==# ''
+  Should &l:swapfile == 1
+  Should bufname('') ==# ''
+
+  Should exists('#plugin-ku#BufLeave#<buffer>') == 0
+  Should exists('#plugin-ku#CursorMovedI#<buffer>') == 0
+  Should exists('#plugin-ku#InsertEnter#<buffer>') == 0
+  Should exists('#plugin-ku#TabLeave#<buffer>') == 0
+  Should exists('#plugin-ku#WinLeave#<buffer>') == 0
+
+  Should maparg('<BS>', 'i') ==# ''
+  Should maparg('<C-h>', 'i') ==# ''
+  Should maparg('<Plug>(ku-choose-action)', 'i') ==# ''
+  Should maparg('<Plug>(ku-choose-action)', 'n') ==# ''
+  Should maparg('<Plug>(ku-do-default-action)', 'i') ==# ''
+  Should maparg('<Plug>(ku-do-default-action)', 'n') ==# ''
+  Should maparg('<Plug>(ku-quit-session)', 'i') ==# ''
+  Should maparg('<Plug>(ku-quit-session)', 'n') ==# ''
+
+  Should maparg('<C-c>', 'n') ==# ''
+
+  " No side effect to reset.
+endfunction
+
+
+
+
+function s:describe__s_ku_active_p()  "{{{1
+  It should return false for the initial state
+
+  Should Call('s:ku_active_p') == 0
+
+  It should return true after starting a ku session
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should Call('s:ku_active_p') == 1
+
+  It should return false after quitting a ku session
+
+  close
+
+  Should Call('s:ku_active_p') == 0
+
+  " Reset side effect.
+  call ku#start()
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+  bwipeout!
+endfunction
+
+
+
+
+function s:describe__s_new_session()  "{{{1
+  let F = function('function')
+  let G = function('type')
+  let original_completeopt = &completeopt
+  let original_curwinnr = winnr()
+  let original_winrestcmd = winrestcmd()
+
+  Should ku#define_source({'gather_candidates': F, 'name': 'abc'}) == 1
+  Should ku#define_source({'gather_candidates': G, 'name': 'test'}) == 1
+  Should ku#available_source_p('abc') == 1
+  Should ku#available_source_p('test') == 1
+
+  It should return a valid object without source (A)
+
+  let session_a = Call('s:new_session', [])
+  Should has_key(session_a, 'id') == 1
+  Should session_a.last_column == Ref('s:INVALID_COLUMN')
+  Should session_a.last_lcandidates ==# []
+  Should session_a.last_pattern_raw == ''
+  Should session_a.now_quitting_p == 0
+  Should session_a.original_completeopt ==# original_completeopt
+  Should session_a.original_curwinnr == original_curwinnr
+  Should session_a.original_winrestcmd ==# original_winrestcmd
+  Should session_a.sources ==# []
+
+  It should return a valid objec without source (B)
+
+  let session_b = Call('s:new_session', [])
+  Should has_key(session_b, 'id') == 1
+  Should session_b.last_column == Ref('s:INVALID_COLUMN')
+  Should session_b.last_lcandidates ==# []
+  Should session_b.last_pattern_raw == ''
+  Should session_b.now_quitting_p == 0
+  Should session_b.original_completeopt ==# original_completeopt
+  Should session_b.original_curwinnr == original_curwinnr
+  Should session_b.original_winrestcmd ==# original_winrestcmd
+  Should session_b.sources ==# []
+
+  It should return sessions with different session ids
+
+  Should session_b.id isnot session_a.id
+
+  It should return a valid object with some sources
+
+  let session = Call('s:new_session', ['test', 'abc'])
+  Should has_key(session, 'id') == 1
+  Should session.last_column == Ref('s:INVALID_COLUMN')
+  Should session.last_lcandidates ==# []
+  Should session.last_pattern_raw == ''
+  Should session.now_quitting_p == 0
+  Should session.original_completeopt ==# original_completeopt
+  Should session.original_curwinnr == original_curwinnr
+  Should session.original_winrestcmd ==# original_winrestcmd
+  Should session.sources ==# [
+  \   ku#available_sources()['test'],
+  \   ku#available_sources()['abc']
+  \ ]
+
+  " Reset side effect.
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_on_CursorMovedI()  "{{{1
+  It requires the following initialization
+
+  call Set('s:session', Call('s:new_session', []))
+  set virtualedit=onemore
+
+  It should complete the prompt if it doesn't exist in the current line
+
+  normal! o
+  Should getline('.') ==# ''
+
+  Should Call('s:on_CursorMovedI') ==# repeat("\<Right>", len(Ref('s:PROMPT')))
+
+  Should getline('.') ==# Ref('s:PROMPT')
+  Should Ref('s:session').last_column == 1
+  Should Ref('s:session').last_pattern_raw ==# ''
+
+  It should move the cursor outside the prompt if it points inside
+
+  normal! o
+  call setline('.', Ref('s:PROMPT'))
+  normal! ^
+  Should getline('.') ==# Ref('s:PROMPT')
+  Should col('.') == 1
+
+  Should Call('s:on_CursorMovedI')
+  \ ==# repeat("\<Right>", len(Ref('s:PROMPT')) - col('.') + 1)
+
+  Should getline('.') ==# Ref('s:PROMPT')
+  Should col('.') == 1
+  Should Ref('s:session').last_column == 1
+  Should Ref('s:session').last_pattern_raw ==# Ref('s:PROMPT')
+
+  It should start completion if new character is inserted
+  " BUGS: The situation to test is that the cursor position is beyond the end
+  " of the current line in Insert mode.  But it's hard to perfectly emulate
+  " this situation by script.
+
+  normal! o
+  let _ = Ref('s:PROMPT') . 'starmine'
+  call setline('.', _)
+  normal! $l
+  Should getline('.') ==# _
+  Should col('.') == len(_) + 1
+
+  Should Call('s:on_CursorMovedI') ==# Ref('s:KEYS_TO_START_COMPLETION')
+
+  Should getline('.') ==# _
+  Should col('.') == len(_) + 1
+  Should Ref('s:session').last_column == len(_) + 1
+  Should Ref('s:session').last_pattern_raw ==# _
+
+  It should return '' otherwise
+
+  normal! o
+  let _ = Ref('s:PROMPT') . 'starmine'
+  call setline('.', _)
+  normal! $
+  Should getline('.') ==# _
+  Should col('.') == len(_)
+
+  Should Call('s:on_CursorMovedI') ==# ''
+
+  Should getline('.') ==# _
+  Should col('.') == len(_)
+  Should Ref('s:session').last_column == len(_)
+  Should Ref('s:session').last_pattern_raw ==# _
+
+  It requires to reset side effect
+
+  bwipeout!
+  set virtualedit&
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_on_InsertEnter()  "{{{1
+  It requires the following initialization
+
+  set virtualedit=onemore
+
+  It should complete the prompt if it doesn't exist in the current line
+
+  normal! o
+  Should getline('.') ==# ''
+
+  Should Call('s:on_InsertEnter') ==# repeat("\<Right>", len(Ref('s:PROMPT')))
+
+  Should getline('.') ==# Ref('s:PROMPT')
+  Should Ref('s:session').last_column == 1
+  Should Ref('s:session').last_pattern_raw ==# ''
+
+  It should move the cursor outside the prompt if it points inside
+
+  normal! o
+  call setline('.', Ref('s:PROMPT'))
+  normal! ^
+  Should getline('.') ==# Ref('s:PROMPT')
+  Should col('.') == 1
+
+  Should Call('s:on_InsertEnter')
+  \ ==# repeat("\<Right>", len(Ref('s:PROMPT')) - col('.') + 1)
+
+  Should getline('.') ==# Ref('s:PROMPT')
+  Should col('.') == 1
+  Should Ref('s:session').last_column == 1
+  Should Ref('s:session').last_pattern_raw ==# Ref('s:PROMPT')
+
+  It should start completion if new character is inserted
+  " BUGS: The situation to test is that the cursor position is beyond the end
+  " of the current line in Insert mode.  But it's hard to perfectly emulate
+  " this situation by script.
+
+  normal! o
+  let _ = Ref('s:PROMPT') . 'starmine'
+  call setline('.', _)
+  normal! $l
+  Should getline('.') ==# _
+  Should col('.') == len(_) + 1
+
+  Should Call('s:on_InsertEnter') ==# Ref('s:KEYS_TO_START_COMPLETION')
+
+  Should getline('.') ==# _
+  Should col('.') == len(_) + 1
+  Should Ref('s:session').last_column == len(_) + 1
+  Should Ref('s:session').last_pattern_raw ==# _
+
+  It should return '' otherwise
+
+  normal! o
+  let _ = Ref('s:PROMPT') . 'starmine'
+  call setline('.', _)
+  normal! $
+  Should getline('.') ==# _
+  Should col('.') == len(_)
+
+  Should Call('s:on_InsertEnter') ==# ''
+
+  Should getline('.') ==# _
+  Should col('.') == len(_)
+  Should Ref('s:session').last_column == len(_)
+  Should Ref('s:session').last_pattern_raw ==# _
+
+  It requires to reset side effect
+
+  bwipeout!
+  set virtualedit&
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_quit_session()  "{{{1
+  topleft new
+  botright new
+  set completeopt=preview
+  let bufnr = bufnr('')
+  let winnr = winnr()
+  let winrestcmd = winrestcmd()
+  let completeopt = &completeopt
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should bufnr('') != bufnr
+  Should winnr() != winnr
+  Should winrestcmd() !=# winrestcmd
+  Should &completeopt !=# completeopt
+
+  It should reset side effect by ku#start()
+
+  Should Call('s:quit_session') == 1
+  let session = Ref('s:session')
+  Should bufnr('') == bufnr
+  Should winnr() == winnr
+  Should winrestcmd() ==# winrestcmd
+  Should &completeopt ==# completeopt
+
+  " NTY: recursively called s:quit_session() - but how to test it?
+
+  " Reset side effect.
+  call ku#start()
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+  bwipeout!
+  only
+endfunction
+
+
+
+
+function s:describe__s_remove_prompt()  "{{{1
+  It should remove a prompt in a:s
+
+  Should Call('s:remove_prompt', Ref('s:PROMPT').'abc') ==# 'abc'
+  Should Call('s:remove_prompt', repeat(Ref('s:PROMPT'),2)) ==# Ref('s:PROMPT')
+
+  It should the same string as a:s if a:s doesn't contain a prompt
+
+  Should Call('s:remove_prompt', 'abc') ==# 'abc'
+  Should Call('s:remove_prompt', '!@#') ==# '!@#'
+endfunction
+
+
+
+
+function s:describe__s_valid_key_p()  "{{{1
+  It should return false for invalid argument
+
+  Should Call('s:valid_key_p', {}, '8bit', 0) == 0
+
+  It should return false if key doesn't exist
+
+  Should Call('s:valid_key_p', {'8bit': 'rave'}, 0, 'string') == 0
+
+  It should return true for valid values
+
+  Should Call('s:valid_key_p', {'8bit': {}}, '8bit', 'dictionary') == 1
+  Should Call('s:valid_key_p', {'8': function('len')}, '8', 'function') == 1
+  Should Call('s:valid_key_p', {'8bit': []}, '8bit', 'list') == 1
+  Should Call('s:valid_key_p', {'8bit': 3339}, '8bit', 'number') == 1
+  Should Call('s:valid_key_p', {'8bit': 'rave'}, '8bit', 'string') == 1
+
+  It should return true for list with valid values
+
+  Should Call('s:valid_key_p', {'A': [1, 2, 3]}, 'A', 'list of numbers') == 1
+  Should Call('s:valid_key_p', {'A': []}, 'A', 'list of functions') == 1
+  Should Call('s:valid_key_p',
+  \ {'A': [function('len')]},
+  \ 'A',
+  \ 'list of functions')
+  \ == 1
+
+  It should return false for list with invalid values
+
+  Should Call('s:valid_key_p', {'A': [1, 2, 3]}, 'A', 'list of strings') == 0
+  Should Call('s:valid_key_p', {'A': [1,'2',3]}, 'A', 'list of numbers') == 0
+endfunction
+
+
+
+
+" __END__  "{{{1
+" vim: filetype=vim foldmethod=marker

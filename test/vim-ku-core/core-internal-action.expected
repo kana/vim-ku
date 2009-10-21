@@ -1,0 +1,88 @@
+==== s_choose_action 
+---- It requires that there is no character in the typeahead buffer 
+.
+---- It should return the name of an action corresponding to a typed key 
+....
+---- It should return 0 if there is no suitable action for a typed key 
+..
+---- It requires to reset side effect 
+.
+
+==== s_composite_action_table_from_kinds 
+---- It requires the following initialization 
+..................
+---- It should return properly composite action tables for given kinds 
+.
+
+==== s_custom_action_1 
+---- It should succeed to define an action 
+....
+---- It should succeed to override an existing action 
+...
+
+==== s_custom_action_2 
+---- It should fail for error cases 
+
+Error detected while processing function vspec#test..<SNR>3_describe__s_custom_action_2..Call..vspec#call..<SNR>6_custom_action_2:
+line    7:
+Action 'name2' is not defined for 'kind2'...
+Action 'name2' is not defined for 'file'..
+---- It should succeed to define an action 
+....
+---- It should succeed to override an existing action 
+...
+
+==== s_custom_kind_action_table 
+---- It should succeed with valid name "file" 
+....
+---- It currently accepts invalid name "!@#$%" 
+....
+---- It should create different custom kind action tables 
+.
+
+==== s_default_kind_action_table 
+---- It should return {} for a kind which is not defined 
+.
+---- It should return the default action table 
+...
+
+==== s_find_action 
+---- It should always return 0 for 'kinds' with no kind definition 
+....
+---- It should succeed for 'kinds' with a usual kind definition 
+....
+---- It should succeed for 'kinds' with practical kind definitions 
+....
+---- It should return custom actions rather than default actions 
+........
+
+==== s_guess_candidate 
+---- It requires the following initialization 
+...
+---- It should succeed if user seems to select a candidate by Vim's completion 
+.
+---- It should fail if there is no proper candidate for the current pattern 
+.
+---- It should succeed if user seems to want to select the first candidate 
+.
+---- It should fail if there is no candidate but user seems to want the 1st one 
+.
+---- It requires to reset side effect 
+
+
+==== s_list_action_tables 
+---- It requires the following initialization 
+...
+---- It should return action tables for given kinds in proper order 
+.
+
+==== s_list_key_bindings_sorted_by_action_name 
+---- It should output key bindings in a given a:key_table 
+....
+
+
+
+**** Result ****
+
+
+92 examples, 0 failures

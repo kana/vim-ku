@@ -1,0 +1,987 @@
+" Test: vim-ku core-public
+runtime! plugin/ku.vim plugin/ku/kind/common.vim
+call vspec#hint({'scope': 'ku#_local_variables()', 'sid': 'ku#_sid_prefix()'})
+function s:describe__ku_available_kind_names()  "{{{1
+  It requires the following initialization
+
+  call Set('s:available_kinds', {})
+
+  It should return [] if there is no kind
+
+  Should ku#available_kind_names() ==# []
+
+  It should return ['test'] if there is a kind 'test'
+
+  let kind = {
+  \   'default_action_table': {},
+  \   'default_key_table': {},
+  \   'name': 'test',
+  \ }
+  Should ku#define_kind(kind) == 1
+  Should ku#available_kind_names() ==# ['test']
+
+  It should return ['test'] if kind 'test' is overrdden
+
+  let kind = {
+  \   'default_action_table': {},
+  \   'default_key_table': {},
+  \   'name': 'test',
+  \ }
+  Should ku#define_kind(kind) == 1
+  Should ku#available_kind_names() ==# ['test']
+
+  It should return multiple names if there are multiple kinds
+
+  let kind = {
+  \   'default_action_table': {},
+  \   'default_key_table': {},
+  \   'name': 'abc',
+  \ }
+  Should ku#define_kind(kind) == 1
+  Should ku#available_kind_names() ==# ['abc', 'test']
+
+  It requires to reset side effect
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_available_kind_p()  "{{{1
+  It requires the following initialization
+
+  call Set('s:available_kinds', {})
+
+  It should return false for non existing kind
+
+  Should ku#available_kinds() ==# {}
+  Should ku#available_kind_names() ==# []
+  Should ku#available_kind_p('test') == 0
+  Should ku#available_kind_p('abc') == 0
+  Should ku#available_kind_p('NoSuchSource') == 0
+
+  It should return true for an existing kind
+
+  let kind = {
+  \   'default_action_table': {},
+  \   'default_key_table': {},
+  \   'name': 'test',
+  \ }
+  Should ku#define_kind(kind) == 1
+  Should ku#available_kind_names() ==# ['test']
+  Should ku#available_kind_p('test') == 1
+  Should ku#available_kind_p('abc') == 0
+  Should ku#available_kind_p('NoSuchSource') == 0
+
+  It should return true for an existing kind which is overridden
+
+  let kind = {
+  \   'default_action_table': {},
+  \   'default_key_table': {},
+  \   'name': 'test',
+  \ }
+  Should ku#define_kind(kind) == 1
+  Should ku#available_kind_names() ==# ['test']
+  Should ku#available_kind_p('test') == 1
+  Should ku#available_kind_p('abc') == 0
+  Should ku#available_kind_p('NoSuchSource') == 0
+
+  It should return true for another existing kind
+
+  let kind = {
+  \   'default_action_table': {},
+  \   'default_key_table': {},
+  \   'name': 'abc',
+  \ }
+  Should ku#define_kind(kind) == 1
+  Should ku#available_kind_names() ==# ['abc', 'test']
+  Should ku#available_kind_p('test') == 1
+  Should ku#available_kind_p('abc') == 1
+  Should ku#available_kind_p('NoSuchSource') == 0
+
+  It requires to reset side effect
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_available_kinds()  "{{{1
+  It requires the following initialization
+
+  call Set('s:available_kinds', {})
+
+  It should return {} if there is no kind
+
+  Should ku#available_kinds() ==# {}
+  Should ku#available_kinds() ==# Ref('s:available_kinds')
+
+  It should return {} after failed ku#define_kind()
+
+  silent! let _
+  \ = ku#define_kind({'default_action_table': {}, 'default_key_table': {}})
+  Should _ == 0
+  silent! let _ = ku#define_kind({'default_action_table': {}, 'name': ''})
+  Should _ == 0
+  silent! let _ = ku#define_kind({'default_key_table': {}, 'name': ''})
+  Should _ == 0
+  Should sort(keys(ku#available_kinds())) ==# []
+  Should ku#available_kinds() ==# Ref('s:available_kinds')
+
+  It should return some content after successful ku#define_kind()
+
+  let kind = {
+  \   'default_action_table': {},
+  \   'default_key_table': {},
+  \   'name': 'test',
+  \ }
+  Should ku#define_kind(kind) == 1
+  Should sort(keys(ku#available_kinds())) ==# ['test']
+  Should ku#available_kinds() ==# Ref('s:available_kinds')
+
+  It should return some content after overriding a kind
+
+  let kind = {
+  \   'default_action_table': {},
+  \   'default_key_table': {},
+  \   'name': 'test',
+  \ }
+  Should ku#define_kind(kind) == 1
+  Should sort(keys(ku#available_kinds())) ==# ['test']
+  Should ku#available_kinds() ==# Ref('s:available_kinds')
+
+  It requires to reset side effect
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_available_source_names()  "{{{1
+  let F = function('function')
+  let G = function('type')
+
+  It should return [] if there is no source
+
+  Should ku#available_sources() ==# {}
+  Should ku#available_source_names() ==# []
+
+  It should return ['test'] if there is a source 'test'
+
+  Should ku#define_source({'gather_candidates': F, 'name': 'test'}) == 1
+  Should ku#available_source_names() ==# ['test']
+
+  It should return ['test'] if source 'test' is overrdden
+
+  Should ku#define_source({'gather_candidates': G, 'name': 'test'}) == 1
+  Should ku#available_source_names() ==# ['test']
+
+  It should return multiple names if there are multiple sources
+
+  Should ku#define_source({'gather_candidates': F, 'name': 'abc'}) == 1
+  Should ku#available_source_names() ==# ['abc', 'test']
+
+  " Reset side effect.
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_available_source_p()  "{{{1
+  let F = function('function')
+  let G = function('type')
+
+  It should return false for non existing source
+
+  Should ku#available_sources() ==# {}
+  Should ku#available_source_names() ==# []
+  Should ku#available_source_p('test') == 0
+  Should ku#available_source_p('abc') == 0
+  Should ku#available_source_p('NoSuchSource') == 0
+
+  It should return true for an existing source
+
+  Should ku#define_source({'gather_candidates': F, 'name': 'test'}) == 1
+  Should ku#available_source_names() ==# ['test']
+  Should ku#available_source_p('test') == 1
+  Should ku#available_source_p('abc') == 0
+  Should ku#available_source_p('NoSuchSource') == 0
+
+  It should return true for an existing source which is overridden
+
+  Should ku#define_source({'gather_candidates': G, 'name': 'test'}) == 1
+  Should ku#available_source_names() ==# ['test']
+  Should ku#available_source_p('test') == 1
+  Should ku#available_source_p('abc') == 0
+  Should ku#available_source_p('NoSuchSource') == 0
+
+  It should return true for another existing source
+
+  Should ku#define_source({'gather_candidates': F, 'name': 'abc'}) == 1
+  Should ku#available_source_names() ==# ['abc', 'test']
+  Should ku#available_source_p('test') == 1
+  Should ku#available_source_p('abc') == 1
+  Should ku#available_source_p('NoSuchSource') == 0
+
+  " Reset side effect.
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_available_sources()  "{{{1
+  let F = function('function')
+  let G = function('type')
+
+  It should return {} if there is no source
+
+  Should ku#available_sources() ==# {}
+  Should ku#available_sources() ==# Ref('s:available_sources')
+
+  It should return {} after failed ku#define_source()
+
+  Should ku#define_source({}) == 0
+  Should ku#define_source({'gather_candidates': 0, 'name': 0}) == 0
+  Should ku#define_source({'gather_candidates': 0, 'name': 'test'}) == 0
+  Should ku#define_source({'gather_candidates': F, 'name': 0}) == 0
+  Should sort(keys(ku#available_sources())) ==# []
+  Should ku#available_sources() ==# Ref('s:available_sources')
+
+  It should return some content after successful ku#define_source()
+
+  Should ku#define_source({'gather_candidates': F, 'name': 'test'}) == 1
+  Should sort(keys(ku#available_sources())) ==# ['test']
+  Should ku#available_sources() ==# Ref('s:available_sources')
+
+  It should return some content after overriding a source
+
+  Should ku#define_source({'gather_candidates': G, 'name': 'test'}) == 1
+  Should sort(keys(ku#available_sources())) ==# ['test']
+  Should ku#available_sources() ==# Ref('s:available_sources')
+
+  " Reset side effect.
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_custom_actioin()  "{{{1
+  It requires the following initialization
+
+  call Set('s:custom_kind_action_tables', {})
+  Should Ref('s:custom_kind_action_tables') ==# {}
+  call Set('s:available_kinds', {})
+  Should ku#define_kind({
+  \ 'default_action_table': {'get': function('get'), 'len': function('len')},
+  \ 'default_key_table': {'g': 'get'},
+  \ 'name': 'file',
+  \ }) == 1
+  Should Ref('s:available_kinds') ==# {
+  \ 'file': {
+  \ 'default_action_table': {'get': function('get'), 'len': function('len')},
+  \ 'default_key_table': {'g': 'get'},
+  \ 'name': 'file',
+  \ },
+  \ }
+
+  It should suceed for ordinary case with 3 arguments
+
+  Should ku#custom_action('file', 'ai', function('len')) == 0
+  Should ku#custom_action('file', 'ai', function('get')) == function('len')
+
+  It should suceed for ordinary case with 4 arguments
+
+  Should ku#custom_action('file', 'default', 'file', 'get') == 0
+  Should ku#custom_action('file', 'default', 'file', 'get') == function('get')
+
+  It currently accepts and ignores 5th and more extra arguments
+
+  Should ku#custom_action('file', 'new', 'file', 'get', '') == 0
+  Should ku#custom_action('file', 'new', 'file', 'get', '') == function('get')
+
+  It should alter the script context as follows
+
+  Should Ref('s:custom_kind_action_tables') ==# {
+  \ 'file': {
+  \ 'ai': function('get'),
+  \ 'default': function('get'),
+  \ 'new': function('get'),
+  \ },
+  \ }
+  Should Ref('s:available_kinds') ==# {
+  \ 'file': {
+  \ 'default_action_table': {'get': function('get'), 'len': function('len')},
+  \ 'default_key_table': {'g': 'get'},
+  \ 'name': 'file',
+  \ },
+  \ }
+
+  " Reset side effect
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_custom_key()  "{{{1
+  It should succeed for kind "buffer" - valid name
+
+  Should ku#custom_key('buffer', '<', 'lt') == 0
+  Should Call('s:custom_kind_key_table', 'buffer') ==# {'<': 'lt'}
+  Should ku#custom_key('buffer', '>', 'gt') == 0
+  Should Call('s:custom_kind_key_table', 'buffer') ==# {'<': 'lt', '>': 'gt'}
+
+  It should succeed to override existing key bindings for kind "buffer"
+
+  Should ku#custom_key('buffer', '<', 'LT') ==# 'lt'
+  Should Call('s:custom_kind_key_table', 'buffer') ==# {'<': 'LT', '>': 'gt'}
+  Should ku#custom_key('buffer', '>', 'GT') ==# 'gt'
+  Should Call('s:custom_kind_key_table', 'buffer') ==# {'<': 'LT', '>': 'GT'}
+
+  It currently accepts invalid name kind "!@#$%"
+
+  Should ku#custom_key('!@#$%', '(', 'lb') == 0
+  Should Call('s:custom_kind_key_table', '!@#$%') ==# {'(': 'lb'}
+  Should ku#custom_key('!@#$%', ')', 'rb') == 0
+  Should Call('s:custom_kind_key_table', '!@#$%') ==# {'(': 'lb', ')': 'rb'}
+
+  It currently overrides existing key bindings for kind "!@#$%"
+
+  Should ku#custom_key('!@#$%', '(', 'LB') ==# 'lb'
+  Should Call('s:custom_kind_key_table', '!@#$%') ==# {'(': 'LB', ')': 'rb'}
+  Should ku#custom_key('!@#$%', ')', 'RB') ==# 'rb'
+  Should Call('s:custom_kind_key_table', '!@#$%') ==# {'(': 'LB', ')': 'RB'}
+
+  It should alter the script context as follows
+
+  Should Ref('s:custom_kind_key_tables') ==# {
+  \ 'buffer': {'<': 'LT', '>': 'GT'},
+  \ '!@#$%': {'(': 'LB', ')': 'RB'},
+  \ }
+
+  " Reset side effect
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_define_default_ui_key_mappings()  "{{{1
+  It requires the following initialization to test its effect
+
+  nnoremap <buffer> <C-c>  QUIT-NORMAL
+  inoremap <buffer> <C-c>  QUIT-INSERT
+
+  Should maparg('<C-c>', 'i') ==# 'QUIT-INSERT'
+  Should maparg('<C-c>', 'n') ==# 'QUIT-NORMAL'
+  Should maparg('<C-i>', 'i') ==# ''
+  Should maparg('<C-i>', 'n') ==# ''
+  Should maparg('<C-m>', 'i') ==# ''
+  Should maparg('<C-m>', 'n') ==# ''
+  Should maparg('<Enter>', 'i') ==# ''
+  Should maparg('<Enter>', 'n') ==# ''
+  Should maparg('<Return>', 'i') ==# ''
+  Should maparg('<Return>', 'n') ==# ''
+  Should maparg('<Tab>', 'i') ==# ''
+  Should maparg('<Tab>', 'n') ==# ''
+
+  It should not override existing key mappings with false
+
+  call ku#define_default_ui_key_mappings(0)
+
+  Should maparg('<C-c>', 'i') ==# 'QUIT-INSERT'
+  Should maparg('<C-c>', 'n') ==# 'QUIT-NORMAL'
+  Should maparg('<C-i>', 'i') ==# '<Plug>(ku-choose-action)'
+  Should maparg('<C-i>', 'n') ==# '<Plug>(ku-choose-action)'
+  Should maparg('<C-m>', 'i') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<C-m>', 'n') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<Enter>', 'i') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<Enter>', 'n') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<Return>', 'i') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<Return>', 'n') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<Tab>', 'i') ==# '<Plug>(ku-choose-action)'
+  Should maparg('<Tab>', 'n') ==# '<Plug>(ku-choose-action)'
+
+  It should override existing key mappings with true
+
+  call ku#define_default_ui_key_mappings(1)
+
+  Should maparg('<C-c>', 'i') ==# '<Plug>(ku-quit-session)'
+  Should maparg('<C-c>', 'n') ==# '<Plug>(ku-quit-session)'
+  Should maparg('<C-i>', 'i') ==# '<Plug>(ku-choose-action)'
+  Should maparg('<C-i>', 'n') ==# '<Plug>(ku-choose-action)'
+  Should maparg('<C-m>', 'i') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<C-m>', 'n') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<Enter>', 'i') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<Enter>', 'n') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<Return>', 'i') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<Return>', 'n') ==# '<Plug>(ku-do-default-action)'
+  Should maparg('<Tab>', 'i') ==# '<Plug>(ku-choose-action)'
+  Should maparg('<Tab>', 'n') ==# '<Plug>(ku-choose-action)'
+
+  It should affect only the current buffer when it is called
+
+  new
+  only
+
+  Should maparg('<C-c>', 'i') ==# ''
+  Should maparg('<C-c>', 'n') ==# ''
+  Should maparg('<C-i>', 'i') ==# ''
+  Should maparg('<C-i>', 'n') ==# ''
+  Should maparg('<C-m>', 'i') ==# ''
+  Should maparg('<C-m>', 'n') ==# ''
+  Should maparg('<Enter>', 'i') ==# ''
+  Should maparg('<Enter>', 'n') ==# ''
+  Should maparg('<Return>', 'i') ==# ''
+  Should maparg('<Return>', 'n') ==# ''
+  Should maparg('<Tab>', 'i') ==# ''
+  Should maparg('<Tab>', 'n') ==# ''
+
+  " Reset side effect
+  " -- :new | only does this, nothing to do here.
+endfunction
+
+
+
+
+function s:describe__ku_define_kind()  "{{{1
+  It requires the following initialization to test its effect
+
+  call Set('s:available_kinds', {})
+  Should Ref('s:available_kinds') ==# {}
+
+  It should fail for invalid kind definition
+
+  Should ku#define_kind({
+  \ 'default_key_table': {},
+  \ 'name': 'file',
+  \ }) == 0
+  Should ku#define_kind({
+  \ 'default_action_table': {},
+  \ 'name': 'file',
+  \ }) == 0
+  Should ku#define_kind({
+  \ 'default_action_table': {},
+  \ 'default_key_table': {},
+  \ }) == 0
+
+  Should ku#define_kind({
+  \ 'default_action_table': 0,
+  \ 'default_key_table': {},
+  \ 'name': 'file',
+  \ }) == 0
+  Should ku#define_kind({
+  \ 'default_action_table': {},
+  \ 'default_key_table': 0,
+  \ 'name': 'file',
+  \ }) == 0
+  Should ku#define_kind({
+  \ 'default_action_table': {},
+  \ 'default_key_table': {},
+  \ 'name': 0,
+  \ }) == 0
+
+  Should Ref('s:available_kinds') ==# {}
+
+  It should succeed for valid kind definition
+
+  Should ku#define_kind({
+  \ 'default_action_table': {'close': function('type')},
+  \ 'default_key_table': {'c': 'close'},
+  \ 'name': 'buffer',
+  \ }) == 1
+  Should ku#define_kind({
+  \ 'default_action_table': {'open': function('type')},
+  \ 'default_key_table': {'o': 'open'},
+  \ 'name': 'file',
+  \ }) == 1
+
+  Should Ref('s:available_kinds') ==# {
+  \ 'buffer': {
+  \ 'default_action_table': {'close': function('type')},
+  \ 'default_key_table': {'c': 'close'},
+  \ 'name': 'buffer'
+  \ },
+  \ 'file': {
+  \ 'default_action_table': {'open': function('type')},
+  \ 'default_key_table': {'o': 'open'},
+  \ 'name': 'file'
+  \ },
+  \ }
+
+  It should succeed to override existing kind definition
+
+  Should ku#define_kind({
+  \ 'default_action_table': {'despair': function('type')},
+  \ 'default_key_table': {'d': 'despair'},
+  \ 'name': 'file',
+  \ }) == 1
+
+  Should Ref('s:available_kinds') ==# {
+  \ 'buffer': {
+  \ 'default_action_table': {'close': function('type')},
+  \ 'default_key_table': {'c': 'close'},
+  \ 'name': 'buffer'
+  \ },
+  \ 'file': {
+  \ 'default_action_table': {'despair': function('type')},
+  \ 'default_key_table': {'d': 'despair'},
+  \ 'name': 'file'
+  \ },
+  \ }
+
+  " Reset side effect
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_define_source()  "{{{1
+  let F = function('function')
+  let G = function('type')
+  let matchers = [function('ku#matcher#default#matches_p')]
+  let sorters = [function('ku#sorter#default#sort')]
+
+  let available_sources = copy(Ref('s:available_sources'))
+  let available_kinds = copy(Ref('s:available_kinds'))
+
+  It should fail for invalid source definition
+
+  Should ku#define_source({}) == 0
+  Should ku#define_source({'gather_candidates': 0, 'name': 0}) == 0
+  Should ku#define_source({'gather_candidates': 0, 'name': 'test'}) == 0
+  Should ku#define_source({'gather_candidates': F, 'name': 0}) == 0
+  Should Ref('s:available_sources') ==# available_sources
+  Should Ref('s:available_kinds') ==# available_kinds
+
+  It should succeed for valid source definition
+
+  Should ku#define_source({'gather_candidates': F, 'name': 'test'}) == 1
+  Should Ref('s:available_sources')['test']
+  \ ==# {
+  \ 'default_action_table': {},
+  \ 'default_key_table': {},
+  \ 'filters': [],
+  \ 'gather_candidates': F,
+  \ 'kind_names': ['source/test', 'common'],
+  \ 'kinds': function('ku#_kinds_from_kind_names'),
+  \ 'matchers': matchers,
+  \ 'name': 'test',
+  \ 'sorters': sorters,
+  \ }
+  Should Ref('s:available_kinds')['source/test']
+  \ ==# {
+  \ 'default_action_table': {},
+  \ 'default_key_table': {},
+  \ 'name': 'source/test',
+  \ }
+  Should Ref('s:available_sources')['test'].kinds()
+  \ ==# [
+  \  Ref('s:available_kinds')['source/test'],
+  \  Ref('s:available_kinds')['common'],
+  \]
+
+  It should succeed to override existing source definition
+
+  Should ku#define_source({'gather_candidates': G, 'name': 'test'}) == 1
+  Should Ref('s:available_sources')['test']
+  \ ==# {
+  \ 'default_action_table': {},
+  \ 'default_key_table': {},
+  \ 'filters': [],
+  \ 'gather_candidates': G,
+  \ 'kind_names': ['source/test', 'common'],
+  \ 'kinds': function('ku#_kinds_from_kind_names'),
+  \ 'matchers': matchers,
+  \ 'name': 'test',
+  \ 'sorters': sorters,
+  \ }
+  Should Ref('s:available_kinds')['source/test']
+  \ ==# {
+  \ 'default_action_table': {},
+  \ 'default_key_table': {},
+  \ 'name': 'source/test',
+  \ }
+  Should Ref('s:available_sources')['test'].kinds()
+  \ ==# [
+  \  Ref('s:available_kinds')['source/test'],
+  \  Ref('s:available_kinds')['common'],
+  \]
+
+  It should succeed for valid source definition with optional attributes
+
+  Should ku#define_source({
+  \ 'default_action_table': {'checkout': function('function')},
+  \ 'default_key_table': {'/': 'checkout'},
+  \ 'filters': [G],
+  \ 'gather_candidates': F,
+  \ 'kinds': ['common', 'source/test'],
+  \ 'matchers': [G],
+  \ 'name': 'test',
+  \ 'sorters': [F]})
+  \ == 1
+  Should Ref('s:available_sources')['test']
+  \ ==# {
+  \ 'default_action_table': {'checkout': function('function')},
+  \ 'default_key_table': {'/': 'checkout'},
+  \ 'filters': [G],
+  \ 'gather_candidates': F,
+  \ 'kind_names': ['source/test', 'common', 'source/test', 'common'],
+  \ 'kinds': function('ku#_kinds_from_kind_names'),
+  \ 'matchers': [G],
+  \ 'name': 'test',
+  \ 'sorters': [F],
+  \ }
+  Should Ref('s:available_kinds')['source/test']
+  \ ==# {
+  \ 'default_action_table': {'checkout': function('function')},
+  \ 'default_key_table': {'/': 'checkout'},
+  \ 'name': 'source/test',
+  \ }
+  Should Ref('s:available_sources')['test'].kinds()
+  \ ==# [
+  \  Ref('s:available_kinds')['source/test'],
+  \  Ref('s:available_kinds')['common'],
+  \  Ref('s:available_kinds')['source/test'],
+  \  Ref('s:available_kinds')['common'],
+  \]
+
+  " Reset side effect
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_restart()  "{{{1
+  " FIXME: NIY
+endfunction
+
+
+
+
+function s:describe__ku_start()  "{{{1
+  It requires the following information to test its effect
+
+  let first_bufnr = bufnr('')
+  let first_completeopt = &g:completeopt
+  Should &l:buftype ==# ''
+  Should winnr('$') == 1
+  Should winnr() == 1
+
+  It should create the ku buffer if it doesn't exist
+
+  call feedkeys('abc', 't')
+  Should ku#start() == 1
+  let second_bufnr = bufnr('')
+
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# 'a'
+  Should nr2char(getchar(0)) ==# 'b'
+  Should nr2char(getchar(0)) ==# 'c'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should &g:completeopt !=# first_completeopt
+  Should &l:filetype ==# 'ku'
+  Should [line('.'), col('.')] == [2, 1]
+  Should bufnr('') != first_bufnr
+  Should getline(1, line('$')) ==# ['', '>']
+  Should winnr('$') == 2
+  Should winnr() == 1
+
+  close
+
+  Should &g:completeopt ==# first_completeopt
+  Should &l:filetype !=# 'ku'
+  Should bufnr('') == first_bufnr
+  Should winnr('$') == 1
+  Should winnr() == 1
+
+  It should reuse existing ku buffer
+
+  Should ku#start() == 1
+
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should bufnr('') == second_bufnr
+
+  close
+
+  It should recreate the ku buffer if it has been deleted
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  bwipeout!
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should bufnr('') != first_bufnr
+  Should bufnr('') != second_bufnr
+
+  close
+
+  It should succeed with {sources}
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should winnr() == 1
+  Should winnr('$') == 2
+
+  close
+
+  It should fail with invalid {sources}
+
+  Should ku#start(['invalid']) == 0
+
+  Should nr2char(getchar(0)) ==# ''
+
+  Should bufnr('') == first_bufnr
+  Should winnr('$') == 1
+  Should winnr() == 1
+
+  It should succeed with {initial-pattern}
+
+  Should ku#start(0, 'def') == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should bufnr('') != first_bufnr
+  Should getline(1, line('$')) ==# ['', '>def']
+  Should winnr('$') == 2
+  Should winnr() == 1
+
+  close
+
+  It should fail while the ku buffer is active
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should ku#start() == 0
+  Should nr2char(getchar(0)) ==# ''
+
+  close
+
+  " FIXME: NTY: If there is some text in the ku buffer.
+  " FIXME: NTY: If there is no room to create a new window.
+
+  " Reset side effect
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+  bwipeout!
+endfunction
+
+
+
+
+function s:describe__ku_take_action__with_candidate()  "{{{1
+  call ku#define_source({
+  \   'gather_candidates': function('type'),
+  \   'name': 'test',
+  \ })
+  let candidate = {
+  \   'ku__source': Ref('s:available_sources')['test'],
+  \   'word': 'EMPRESS',
+  \ }
+
+  It should do nothing with 'nop'
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should Call('s:ku_active_p') == 1
+  Should ku#take_action('nop', {}) == 1
+  Should Call('s:ku_active_p') == 0
+
+  It should take a given action
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should Call('s:ku_active_p') == 1
+  Should ku#take_action('ex', candidate) == 1
+  Should Call('s:ku_active_p') == 0
+
+  Should nr2char(getchar(0)) ==# ':'
+  Should nr2char(getchar(0)) ==# ' '
+  Should nr2char(getchar(0)) ==# 'E'
+  Should nr2char(getchar(0)) ==# 'M'
+  Should nr2char(getchar(0)) ==# 'P'
+  Should nr2char(getchar(0)) ==# 'R'
+  Should nr2char(getchar(0)) ==# 'E'
+  Should nr2char(getchar(0)) ==# 'S'
+  Should nr2char(getchar(0)) ==# 'S'
+  Should nr2char(getchar(0)) ==# "\<C-b>"
+
+  It should choose action with '*choose*' - action found
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should Call('s:ku_active_p') == 1
+  call feedkeys(':', 't')
+  silent let _ = ku#take_action('*choose*', candidate)
+  Should _ == 1
+  Should Call('s:ku_active_p') == 0
+
+  Should nr2char(getchar(0)) ==# ':'
+  Should nr2char(getchar(0)) ==# ' '
+  Should nr2char(getchar(0)) ==# 'E'
+  Should nr2char(getchar(0)) ==# 'M'
+  Should nr2char(getchar(0)) ==# 'P'
+  Should nr2char(getchar(0)) ==# 'R'
+  Should nr2char(getchar(0)) ==# 'E'
+  Should nr2char(getchar(0)) ==# 'S'
+  Should nr2char(getchar(0)) ==# 'S'
+  Should nr2char(getchar(0)) ==# "\<C-b>"
+
+  It should choose action with '*choose*' - action not found
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should Call('s:ku_active_p') == 1
+  call feedkeys('teleporter', 't')
+  silent let _ = ku#take_action('*choose*', candidate)
+  Should _ == 0
+  Should Call('s:ku_active_p') == 0
+
+  Should nr2char(getchar(0)) ==# 'e'
+  Should nr2char(getchar(0)) ==# 'l'
+  Should nr2char(getchar(0)) ==# 'e'
+  Should nr2char(getchar(0)) ==# 'p'
+  Should nr2char(getchar(0)) ==# 'o'
+  Should nr2char(getchar(0)) ==# 'r'
+  Should nr2char(getchar(0)) ==# 't'
+  Should nr2char(getchar(0)) ==# 'e'
+  Should nr2char(getchar(0)) ==# 'r'
+  Should nr2char(getchar(0)) ==# ''
+
+  It should fail if proper candidate is not found
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should Call('s:ku_active_p') == 1
+  Should ku#take_action('default', 0) == 0
+  Should Call('s:ku_active_p') == 0
+
+  It should fail if a given action is not found
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should Call('s:ku_active_p') == 1
+  silent! let _ = ku#take_action('railgun', candidate)
+  Should _ == 0
+  Should Call('s:ku_active_p') == 0
+
+  It requires to reset side effect
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+  bwipeout!
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_take_action__without_candidate()  "{{{1
+  " BUGS: Not all cases are tested because of many combinations.
+  " Here only 2 cases are tested based on result of s:gather_candidates().
+
+  It requires the following initialization
+
+  call ku#define_source({
+  \   'gather_candidates': function('type'),
+  \   'name': 'test',
+  \ })
+  let source = Ref('s:available_sources')['test']
+
+  It should succeed if there is a proper candidate
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  call setline(Ref('s:LNUM_PATTERN'), 'EMPRESS')
+  let session = Ref('s:session')
+  let session.last_pattern_raw = 'EM'
+  let session.last_lcandidates = [
+  \   {'ku__source': source, 'word': 'DJ TROOPERS', 'menu': 'IIDX'},
+  \   {'ku__source': source, 'word': 'EMPRESS', 'menu': 'IIDX'},
+  \   {'ku__source': source, 'word': 'EMPRESS', 'menu': 'MAJOR ARCANA'},
+  \ ]
+
+  Should Call('s:ku_active_p') == 1
+  Should ku#take_action('ex') == 1
+  Should Call('s:ku_active_p') == 0
+
+  Should nr2char(getchar(0)) ==# ':'
+  Should nr2char(getchar(0)) ==# ' '
+  Should nr2char(getchar(0)) ==# 'E'
+  Should nr2char(getchar(0)) ==# 'M'
+  Should nr2char(getchar(0)) ==# 'P'
+  Should nr2char(getchar(0)) ==# 'R'
+  Should nr2char(getchar(0)) ==# 'E'
+  Should nr2char(getchar(0)) ==# 'S'
+  Should nr2char(getchar(0)) ==# 'S'
+  Should nr2char(getchar(0)) ==# "\<C-b>"
+
+  It should fail if there is no proper candidate
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  call setline(Ref('s:LNUM_PATTERN'), Ref('s:PROMPT') . 'emp')
+  let session = Ref('s:session')
+  let session.last_pattern_raw = Ref('s:PROMPT') . 'emp'
+  let session.last_lcandidates = [
+  \ ]
+
+  Should Call('s:ku_active_p') == 1
+  silent! let _ = ku#take_action('ex')
+  Should _ == 0
+  Should Call('s:ku_active_p') == 0
+
+  Should nr2char(getchar(0)) ==# ''
+
+  It requires to reset side effect
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+  bwipeout!
+  ResetContext
+endfunction
+
+
+
+
+" __END__  "{{{1
+" vim: filetype=vim foldmethod=marker

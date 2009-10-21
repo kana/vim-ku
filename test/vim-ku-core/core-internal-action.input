@@ -1,0 +1,438 @@
+" Test: vim-ku core-internal-action
+runtime! plugin/ku.vim plugin/ku/kind/common.vim
+call vspec#hint({'scope': 'ku#_local_variables()', 'sid': 'ku#_sid_prefix()'})
+function s:describe__s_choose_action()  "{{{1
+  It requires that there is no character in the typeahead buffer
+
+  let typeahead = ''
+  while getchar(1) isnot 0
+    let typeahead .= nr2char(getchar())
+  endwhile
+  Should typeahead ==# ''
+
+  call ku#define_source({
+  \   'gather_candidates': function('type'),
+  \   'name': 'test',
+  \ })
+  let candidate = {
+  \   'ku__source': Ref('s:available_sources')['test'],
+  \   'word': 'close your eyes',
+  \ }
+
+  It should return the name of an action corresponding to a typed key
+
+  call feedkeys('/')
+  silent let action_name = Call('s:choose_action', candidate)
+  Should action_name ==# 'cd'
+  Should nr2char(getchar(0)) ==# ''
+
+  call feedkeys('H')
+  silent let action_name = Call('s:choose_action', candidate)
+  Should action_name ==# 'Left'
+  Should nr2char(getchar(0)) ==# ''
+
+  It should return 0 if there is no suitable action for a typed key
+
+  call feedkeys("\<S-F12>")
+  silent let action_name = Call('s:choose_action', candidate)
+  Should action_name == 0
+  Should nr2char(getchar(0)) ==# ''
+
+  It requires to reset side effect
+
+    " Ensure empty typeahead buffer.
+  let typeahead = ''
+  while getchar(1) isnot 0
+    let typeahead .= nr2char(getchar())
+  endwhile
+  Should typeahead == ''
+    " Implicit changes in the script context.
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_composite_action_table_from_kinds()  "{{{1
+  It requires the following initialization
+
+  " (composite) A a A B A a A b A a A B A a A
+  " kind_a cus  1   3   5   7   9   b   d   f
+  " kind_a def    2 3     6 7     a b     e f
+  " kind_b cus        4 5 6 7         c d e f
+  " kind_b def                8 9 a b c d e f
+
+  let kind_a = {
+  \   'default_action_table': {
+  \     '2': function('add'),
+  \     '3': function('add'),
+  \     '6': function('add'),
+  \     '7': function('add'),
+  \     'a': function('add'),
+  \     'b': function('add'),
+  \     'e': function('add'),
+  \     'f': function('add'),
+  \   },
+  \   'default_key_table': {},
+  \   'name': 'A',
+  \ }
+  let kind_b = {
+  \   'default_action_table': {
+  \     '8': function('bufnr'),
+  \     '9': function('bufnr'),
+  \     'a': function('bufnr'),
+  \     'b': function('bufnr'),
+  \     'c': function('bufnr'),
+  \     'd': function('bufnr'),
+  \     'e': function('bufnr'),
+  \     'f': function('bufnr'),
+  \   },
+  \   'default_key_table': {},
+  \   'name': 'B',
+  \ }
+  Should ku#define_kind(kind_a) == 1
+  Should ku#define_kind(kind_b) == 1
+  Should ku#custom_action(kind_a.name, '1', function('call')) == 0
+  Should ku#custom_action(kind_a.name, '3', function('call')) == 0
+  Should ku#custom_action(kind_a.name, '5', function('call')) == 0
+  Should ku#custom_action(kind_a.name, '7', function('call')) == 0
+  Should ku#custom_action(kind_a.name, '9', function('call')) == 0
+  Should ku#custom_action(kind_a.name, 'b', function('call')) == 0
+  Should ku#custom_action(kind_a.name, 'd', function('call')) == 0
+  Should ku#custom_action(kind_a.name, 'f', function('call')) == 0
+  Should ku#custom_action(kind_b.name, '4', function('delete')) == 0
+  Should ku#custom_action(kind_b.name, '5', function('delete')) == 0
+  Should ku#custom_action(kind_b.name, '6', function('delete')) == 0
+  Should ku#custom_action(kind_b.name, '7', function('delete')) == 0
+  Should ku#custom_action(kind_b.name, 'c', function('delete')) == 0
+  Should ku#custom_action(kind_b.name, 'd', function('delete')) == 0
+  Should ku#custom_action(kind_b.name, 'e', function('delete')) == 0
+  Should ku#custom_action(kind_b.name, 'f', function('delete')) == 0
+
+  It should return properly composite action tables for given kinds
+
+  Should Call('s:composite_action_table_from_kinds', [kind_a, kind_b])
+  \ == {
+  \   '1': function('call'),
+  \   '2': function('add'),
+  \   '3': function('call'),
+  \   '4': function('delete'),
+  \   '5': function('call'),
+  \   '6': function('add'),
+  \   '7': function('call'),
+  \   '8': function('bufnr'),
+  \   '9': function('call'),
+  \   'a': function('add'),
+  \   'b': function('call'),
+  \   'c': function('delete'),
+  \   'd': function('call'),
+  \   'e': function('add'),
+  \   'f': function('call'),
+  \ }
+
+  " Reset side effect.
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_custom_action_1()  "{{{1
+  It should succeed to define an action
+
+  Should Call('s:custom_kind_action_table', 'file') ==# {}
+  Should Call('s:custom_action_1', 'file', 'ai', function('len')) == 0
+  Should Call('s:custom_kind_action_table', 'file') ==# {'ai': function('len')}
+  Should Ref('s:custom_kind_action_tables') ==# {'file':{'ai':function('len')}}
+
+  It should succeed to override an existing action
+
+  Should Call('s:custom_action_1', 'file', 'ai', function('get'))
+  \ == function('len')
+  Should Call('s:custom_kind_action_table', 'file') ==# {'ai': function('get')}
+  Should Ref('s:custom_kind_action_tables') ==# {'file':{'ai':function('get')}}
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_custom_action_2()  "{{{1
+  It should fail for error cases
+
+  Should Call('s:custom_action_2', 'file', 'name1', 'kind2', 'name2') == 0
+  Should ku#define_kind({
+  \ 'default_action_table': {'get': function('get'), 'len': function('len')},
+  \ 'default_key_table': {'g': 'get'},
+  \ 'name': 'file',
+  \ }) == 1
+  Should Call('s:custom_action_2', 'file', 'name1', 'file', 'name2') == 0
+
+  It should succeed to define an action
+
+  Should Call('s:custom_kind_action_table', 'file') ==# {}
+
+  Should Call('s:custom_action_2', 'file', 'default', 'file', 'get') == 0
+
+  Should Call('s:custom_kind_action_table', 'file')
+  \ ==# {'default': function('get')}
+  Should Ref('s:custom_kind_action_tables')
+  \ ==# {'file': {'default': function('get')}}
+
+  It should succeed to override an existing action
+
+  Should Call('s:custom_action_2', 'file', 'default', 'file', 'len')
+  \ == function('get')
+
+  Should Call('s:custom_kind_action_table', 'file')
+  \ ==# {'default': function('len')}
+  Should Ref('s:custom_kind_action_tables')
+  \ ==# {'file': {'default': function('len')}}
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_custom_kind_action_table()  "{{{1
+  It should succeed with valid name "file"
+
+  let custom_file_action_table = Call('s:custom_kind_action_table', 'file')
+  Should custom_file_action_table ==# {}
+  Should Ref('s:custom_kind_action_tables') ==# {'file': {}}
+  let custom_file_action_table_2 = Call('s:custom_kind_action_table', 'file')
+  Should custom_file_action_table is custom_file_action_table_2
+  Should Ref('s:custom_kind_action_tables') ==# {'file': {}}
+
+  It currently accepts invalid name "!@#$%"
+
+  let custom_xxxxx_action_table = Call('s:custom_kind_action_table', '!@#$%')
+  Should custom_xxxxx_action_table ==# {}
+  Should Ref('s:custom_kind_action_tables') ==# {'file': {}, '!@#$%': {}}
+  let custom_xxxxx_action_table_2 = Call('s:custom_kind_action_table', '!@#$%')
+  Should custom_xxxxx_action_table is custom_xxxxx_action_table_2
+  Should Ref('s:custom_kind_action_tables') ==# {'file': {}, '!@#$%': {}}
+
+  It should create different custom kind action tables
+
+  Should custom_file_action_table isnot custom_xxxxx_action_table
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_default_kind_action_table()  "{{{1
+  It should return {} for a kind which is not defined
+
+  Should Call('s:default_kind_action_table', 'buffer') ==# {}
+
+  It should return the default action table
+
+  let kind_a = {
+  \ 'default_action_table': {'close': function('type')},
+  \ 'default_key_table': {'c': 'close'},
+  \ 'name': 'buffer',
+  \ }
+  Should ku#define_kind(kind_a) == 1
+
+  Should Call('s:default_kind_action_table', 'buffer')
+  \ ==# {'close': function('type')}
+  Should Call('s:default_kind_action_table', 'buffer')
+  \ is kind_a.default_action_table
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_find_action()  "{{{1
+  " The followings kinds-s are invalid but it's enough to test.
+  let kinds_empty = []
+  let kinds_test = [{'name': 'test'}]
+  let kinds_practical = [{'name': 'source/test'},
+  \                      {'name': 'test'},
+  \                      {'name': 'common'}]
+
+  It should always return 0 for 'kinds' with no kind definition
+  " -- Although such case is not occured in practical use.
+
+  Should Call('s:find_action', 'default', kinds_empty) == 0
+  Should Call('s:find_action', 'open', kinds_empty) == 0
+  Should Call('s:find_action', 'nop', kinds_empty) == 0
+  Should Call('s:find_action', 'nothing', kinds_empty) == 0
+
+  It should succeed for 'kinds' with a usual kind definition
+  " -- Although such case is not occured in practical use.
+
+  Should Call('s:find_action', 'default', kinds_test) == 0
+  Should Call('s:find_action', 'open', kinds_test) == 0
+  Should Call('s:find_action', 'nop', kinds_test) == 0
+  Should Call('s:find_action', 'nothing', kinds_test) == 0
+
+  It should succeed for 'kinds' with practical kind definitions
+
+  Should Call('s:find_action', 'default', kinds_practical)
+  \ == function('ku#action#common#default')
+  Should Call('s:find_action', 'open', kinds_practical)
+  \ == function('ku#action#common#open')
+  Should Call('s:find_action', 'nop', kinds_practical) == 0
+  Should Call('s:find_action', 'nothing', kinds_practical) == 0
+
+  It should return custom actions rather than default actions
+
+  Should ku#custom_action('common', 'default', 'common', 'above') == 0
+  Should ku#custom_action('test', 'default', 'common', 'left') == 0
+  Should ku#custom_action('test', 'nop', 'common', 'below') == 0
+  Should ku#custom_action('test', 'nothing', 'common', 'right') == 0
+
+  Should Call('s:find_action', 'default', kinds_practical)
+  \ == function('ku#action#common#left')
+  Should Call('s:find_action', 'open', kinds_practical)
+  \ == function('ku#action#common#open')
+  Should Call('s:find_action', 'nop', kinds_practical)
+  \ == function('ku#action#common#below')
+  Should Call('s:find_action', 'nothing', kinds_practical)
+  \ == function('ku#action#common#right')
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_list_action_tables()  "{{{1
+  It requires the following initialization
+
+  let kind_a = {
+  \   'default_action_table': {'default': function('type')},
+  \   'default_key_table': {'d': 'default'},
+  \   'name': 'A',
+  \ }
+  let kind_b = {
+  \   'default_action_table': {'default': function('get')},
+  \   'default_key_table': {'d': 'default'},
+  \   'name': 'B',
+  \ }
+  let kind_c = {
+  \   'default_action_table': {'default': function('len')},
+  \   'default_key_table': {'d': 'default'},
+  \   'name': 'C',
+  \ }
+  Should ku#define_kind(kind_a) == 1
+  Should ku#define_kind(kind_b) == 1
+  Should ku#define_kind(kind_c) == 1
+
+  It should return action tables for given kinds in proper order
+
+  Should Call('s:list_action_tables', [kind_a, kind_b, kind_c])
+  \ == [
+  \    Call('s:custom_kind_action_table', kind_a.name),
+  \    Call('s:default_kind_action_table', kind_a.name),
+  \    Call('s:custom_kind_action_table', kind_b.name),
+  \    Call('s:default_kind_action_table', kind_b.name),
+  \    Call('s:custom_kind_action_table', kind_c.name),
+  \    Call('s:default_kind_action_table', kind_c.name),
+  \ ]
+
+  " Reset side effect.
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_list_key_bindings_sorted_by_action_name()  "{{{1
+  " BUGS: ad hoc checking
+  It should output key bindings in a given a:key_table
+
+  let key_table = {
+  \   '4': 'teleporter',
+  \   '5': 'railgun',
+  \ }
+
+  redir => message
+  silent call Call('s:list_key_bindings_sorted_by_action_name', key_table)
+  redir END
+
+  Should message =~# '\<4\>'
+  Should message =~# '\<teleporter\>'
+  Should message =~# '\<5\>'
+  Should message =~# '\<railgun\>'
+endfunction
+
+
+
+
+function s:describe__s_guess_candidate()  "{{{1
+  It requires the following initialization
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  let session = Ref('s:session')
+
+  It should succeed if user seems to select a candidate by Vim's completion
+
+  call setline(Ref('s:LNUM_PATTERN'), 'EMPRESS')
+  let session.last_pattern_raw = 'EM'
+  let session.last_lcandidates = [
+  \   {'word': 'DJ TROOPERS', 'menu': 'IIDX'},
+  \   {'word': 'EMPRESS', 'menu': 'IIDX'},
+  \   {'word': 'EMPRESS', 'menu': 'MAJOR ARCANA'},
+  \ ]
+
+  Should Call('s:guess_candidate') ==# {'word': 'EMPRESS', 'menu': 'IIDX'}
+
+  It should fail if there is no proper candidate for the current pattern
+
+  call setline(Ref('s:LNUM_PATTERN'), 'empress')
+  let session.last_pattern_raw = 'EM'
+  let session.last_lcandidates = [
+  \   {'word': 'DJ TROOPERS', 'menu': 'IIDX'},
+  \   {'word': 'EMPRESS', 'menu': 'IIDX'},
+  \   {'word': 'EMPRESS', 'menu': 'MAJOR ARCANA'},
+  \ ]
+
+  silent! let _ = Call('s:guess_candidate')
+  Should _ == 0
+
+  It should succeed if user seems to want to select the first candidate
+
+  call setline(Ref('s:LNUM_PATTERN'), Ref('s:PROMPT') . 'emp')
+  let session.last_pattern_raw = Ref('s:PROMPT') . 'emp'
+  let session.last_lcandidates = [
+  \   {'word': 'DJ TROOPERS', 'menu': 'IIDX'},
+  \   {'word': 'EMPRESS', 'menu': 'IIDX'},
+  \   {'word': 'EMPRESS', 'menu': 'MAJOR ARCANA'},
+  \ ]
+
+  Should Call('s:guess_candidate') ==# {'word': 'DJ TROOPERS', 'menu': 'IIDX'}
+
+  It should fail if there is no candidate but user seems to want the 1st one
+  " FIXME: It should succeed after fake sources are implemented.
+
+  call setline(Ref('s:LNUM_PATTERN'), Ref('s:PROMPT') . 'emp')
+  let session.last_pattern_raw = Ref('s:PROMPT') . 'emp'
+  let session.last_lcandidates = [
+  \ ]
+
+  silent! let _ = Call('s:guess_candidate')
+  Should _ == 0
+
+  It requires to reset side effect
+
+  bwipeout!
+  ResetContext
+endfunction
+
+
+
+
+" __END__  "{{{1
+" vim: filetype=vim foldmethod=marker
