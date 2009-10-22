@@ -1,0 +1,445 @@
+" Test: vim-ku-core core-internal-candidate
+runtime! plugin/ku.vim plugin/ku/**/*.vim
+call vspec#hint({'scope': 'ku#_local_variables()', 'sid': 'ku#_sid_prefix()'})
+function s:describe__ku_omnifunc__findstart_0()  "{{{1
+  It should return [] with no source
+
+  call ku#start()
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should ku#omnifunc(0, 'pattern') ==# []
+
+  close
+
+  It should return some candidate with a source
+
+  let source = {}
+  let source.name = 'test'
+  function! source.gather_candidates(args)
+    return [{'word': a:args.pattern, 'abbr': a:args.pattern[:2-1]}]
+  endfunction
+  Should ku#define_source(source) == 1
+
+  call ku#start()
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should ku#omnifunc(0, 'pattern') ==# [
+  \ {'word': 'pattern',
+  \  'abbr': 'pa',
+  \  'ku__source': Ref('s:available_sources')['test']},
+  \ ]
+  Should ku#omnifunc(0, 'pattern') ==# Ref('s:session').last_lcandidates
+
+  close
+
+  It should return some candidate with a source and a:base contains a prompt
+
+  call ku#start()
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  Should ku#omnifunc(0, Ref('s:PROMPT').'pattern') ==# [
+  \ {'word': 'pattern',
+  \  'abbr': 'pa',
+  \  'ku__source': Ref('s:available_sources')['test']},
+  \ ]
+  Should ku#omnifunc(0, 'pattern') ==# Ref('s:session').last_lcandidates
+
+  close
+
+  It requires to reset side effect
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+  bwipeout!
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_omnifunc__findstart_1()  "{{{1
+  It requires the following initialization
+
+  call ku#start()
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+
+  It should succeed with the default state (there is only the prompt)
+
+  " ku#start() has reset the content of the ku buffer.
+  " So that the prompt must be in the ku buffer.
+  Should ku#omnifunc(1, '') == 0
+  Should Ref('s:session').last_lcandidates ==# []
+
+  It should succeed with the prompt and some characters
+
+  normal! Amane
+  Should ku#omnifunc(1, '') == 0
+  Should Ref('s:session').last_lcandidates ==# []
+
+  It should succeed with no character
+
+  normal! 0d$
+  Should ku#omnifunc(1, '') == 0
+  Should Ref('s:session').last_lcandidates ==# []
+
+  It should succeed with some characters but no prompt
+
+  normal! Amane
+  Should ku#omnifunc(1, '') == 0
+  Should Ref('s:session').last_lcandidates ==# []
+
+  close
+
+  It requires to reset side effect
+
+  Should ku#start() == 1
+  Should nr2char(getchar(0)) ==# 'A'
+  Should nr2char(getchar(0)) ==# ''
+  bwipeout!
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_filter_lcandidates()  "{{{1
+  function! Test_filter_odd(lcandidates, args)
+    return filter(a:lcandidates, 'len(v:val.word) % 2')
+  endfunction
+
+  function! Test_filter_m(lcandidates, args)
+    return filter(a:lcandidates, 'v:val.word =~# "m"')
+  endfunction
+
+  let RAW_LCANDIDATES = [
+  \     {'word': 'a'},
+  \     {'word': 'lm'},
+  \     {'word': 'bcd'},
+  \     {'word': 'uvwx'},
+  \     {'word': 'mnopq'},
+  \   ]
+  let ARGS = {
+  \     'pattern': '',
+  \   }
+    " The following sources are actually invalid, but it's enough to test.
+  let SOURCE_EMPTY = {
+  \     'filters': [],
+  \   }
+  let SOURCE_M = {
+  \     'filters': [function('Test_filter_m')],
+  \   }
+  let SOURCE_M_ODD = {
+  \     'filters': [function('Test_filter_m'),
+  \                 function('Test_filter_odd')],
+  \   }
+  let SOURCE_ODD = {
+  \     'filters': [function('Test_filter_odd')],
+  \   }
+  let SOURCE_ODD_M = {
+  \     'filters': [function('Test_filter_odd'),
+  \                 function('Test_filter_m')],
+  \   }
+
+  It should return candidates as-is with no filter
+
+  Should Call('s:filter_lcandidates', copy(RAW_LCANDIDATES), ARGS,SOURCE_EMPTY)
+  \ ==# [
+  \ {'word': 'a'},
+  \ {'word': 'lm'},
+  \ {'word': 'bcd'},
+  \ {'word': 'uvwx'},
+  \ {'word': 'mnopq'},
+  \ ]
+
+  It should return candidates filtered by M
+
+  Should Call('s:filter_lcandidates', copy(RAW_LCANDIDATES), ARGS, SOURCE_M)
+  \ ==# [
+  \ {'word': 'lm'},
+  \ {'word': 'mnopq'},
+  \ ]
+
+  It should return candidates filtered by ODD
+
+  Should Call('s:filter_lcandidates', copy(RAW_LCANDIDATES), ARGS, SOURCE_ODD)
+  \ ==# [
+  \ {'word': 'a'},
+  \ {'word': 'bcd'},
+  \ {'word': 'mnopq'},
+  \ ]
+
+  It should return candidates filtered by M and ODD
+
+  Should Call('s:filter_lcandidates', copy(RAW_LCANDIDATES), ARGS,SOURCE_M_ODD)
+  \ ==# [
+  \ {'word': 'mnopq'},
+  \ ]
+
+  It should return the same candidates regardless of order of filters
+
+  Should Call('s:filter_lcandidates', copy(RAW_LCANDIDATES), ARGS,SOURCE_ODD_M)
+  \ ==# Call('s:filter_lcandidates', copy(RAW_LCANDIDATES), ARGS, SOURCE_M_ODD)
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_lcandidates_from_pattern()  "{{{1
+  function! Test_matcher_always(...)
+    return 1
+  endfunction
+
+  let source_a = {}
+  let source_a.name = 'source_a'
+  function! source_a.gather_candidates(args)
+    return [{'word': a:args.pattern}]
+  endfunction
+  let source_a.sorters = []
+  let source_a.matchers = [function('Test_matcher_always')]
+  let source_a.filters = []
+
+  let source_b = {}
+  let source_b.name = 'source_b'
+  function! source_b.gather_candidates(args)
+    return [{'word': 'b'}, {'word': 'B'}]
+  endfunction
+  let source_b.sorters = []
+  let source_b.matchers = [function('Test_matcher_always')]
+  let source_b.filters = []
+
+  let source_c = {}
+  let source_c.name = 'source_c'
+  function! source_c.gather_candidates(args)
+    return [{'word': 'u'}, {'word': 'p'}]
+  endfunction
+  let source_c.sorters = [function('ku#sorter#simple#sort')]
+  let source_c.matchers = [function('Test_matcher_always')]
+  let source_c.filters = []
+
+  It should return [] with no source
+
+  Should Call('s:lcandidates_from_pattern', '2330', []) ==# []
+
+  It should return some candidates with a source
+
+  Should Call('s:lcandidates_from_pattern', '2330', [source_a])
+  \ ==# [
+  \   {'ku__source': source_a, 'word': '2330'},
+  \ ]
+
+  It should return some candidates with multiple sources
+
+  Should Call('s:lcandidates_from_pattern', '2330', [source_a, source_b])
+  \ ==# [
+  \   {'ku__source': source_a, 'word': '2330'},
+  \   {'ku__source': source_b, 'word': 'b'},
+  \   {'ku__source': source_b, 'word': 'B'},
+  \ ]
+
+  It should return some candidates with multiple sources - duplicate sources
+  " (although this case is not a valid usage)
+
+  Should Call('s:lcandidates_from_pattern','2330',[source_a,source_b,source_a])
+  \ ==# [
+  \   {'ku__source': source_a, 'word': '2330'},
+  \   {'ku__source': source_b, 'word': 'b'},
+  \   {'ku__source': source_b, 'word': 'B'},
+  \   {'ku__source': source_a, 'word': '2330'},
+  \ ]
+
+  It should return sorted candidates for a source with sorters
+
+  Should Call('s:lcandidates_from_pattern', '2330', [source_c])
+  \ ==# [
+  \   {'ku__source': source_c, 'word': 'p'},
+  \   {'ku__source': source_c, 'word': 'u'},
+  \ ]
+
+  It should return partially sorted candidates for sources with/without sorters
+
+  Should Call('s:lcandidates_from_pattern', '2330', [source_c, source_b])
+  \ ==# [
+  \   {'ku__source': source_c, 'word': 'p'},
+  \   {'ku__source': source_c, 'word': 'u'},
+  \   {'ku__source': source_b, 'word': 'b'},
+  \   {'ku__source': source_b, 'word': 'B'},
+  \ ]
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_matched_lcandidates()  "{{{1
+  function! Test_matcher_odd(candidate, args)
+    return len(a:candidate.word) % 2
+  endfunction
+
+  let RAW_LCANDIDATES = [
+  \     {'word': 'mk'},
+  \     {'word': 'iue'},
+  \     {'word': 'kr'},
+  \     {'word': 'oom'},
+  \     {'word': 'tk'},
+  \     {'word': 'oo'},
+  \   ]
+  let ARGS = {
+  \     'pattern': 'm',
+  \   }
+    " The following sources are actually invalid, but it's enough to test.
+  let SOURCE_D_O = {
+  \     'matchers': [function('ku#matcher#default#matches_p'),
+  \                  function('Test_matcher_odd')],
+  \   }
+  let SOURCE_DEFAULT = {
+  \     'matchers': [function('ku#matcher#default#matches_p')],
+  \   }
+  let SOURCE_EMPTY = {
+  \     'matchers': [],
+  \   }
+  let SOURCE_ODD = {
+  \     'matchers': [function('Test_matcher_odd')],
+  \   }
+
+  It should return nothing with no matcher
+
+  Should Call('s:matched_lcandidates', copy(RAW_LCANDIDATES),ARGS,SOURCE_EMPTY)
+  \ ==# [
+  \ ]
+
+  It should return some candidates with the default matcher
+
+  Should Call('s:matched_lcandidates',
+  \           copy(RAW_LCANDIDATES), ARGS, SOURCE_DEFAULT)
+  \ ==# [
+  \ {'word': 'mk'},
+  \ {'word': 'oom'},
+  \ ]
+
+  It should return some candidates with a custom matcher
+
+  Should Call('s:matched_lcandidates', copy(RAW_LCANDIDATES), ARGS, SOURCE_ODD)
+  \ ==# [
+  \ {'word': 'iue'},
+  \ {'word': 'oom'},
+  \ ]
+
+  It should return some candidates matched with "default" or "odd"
+
+  Should Call('s:matched_lcandidates', copy(RAW_LCANDIDATES), ARGS, SOURCE_D_O)
+  \ ==# [
+  \ {'word': 'mk'},
+  \ {'word': 'oom'},
+  \ {'word': 'iue'},
+  \ {'word': 'oom'},
+  \ ]
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_normalize_candidate()  "{{{1
+  It should normalize a given candidate with a given source
+
+  let candidate = {'word': 'smooooch'}
+  Should Call('s:normalize_candidate', candidate, 'CANDY RAVE') is candidate
+  Should candidate ==# {'word': 'smooooch', 'ku__source': 'CANDY RAVE'}
+endfunction
+
+
+
+
+function s:describe__s_sort_lcandidates()  "{{{1
+  function! Test_sorter_reverse(lcandidates, args)
+    return reverse(a:lcandidates)
+  endfunction
+
+  let RAW_LCANDIDATES = [
+  \     {'word': 'a'},
+  \     {'word': 'l'},
+  \     {'word': 'b'},
+  \     {'word': 'u'},
+  \     {'word': 'm'},
+  \   ]
+  let ARGS = {
+  \     'pattern': '',
+  \   }
+    " The following sources are actually invalid, but it's enough to test.
+  let SOURCE_EMPTY = {
+  \     'sorters': [],
+  \   }
+  let SOURCE_REVERSE = {
+  \     'sorters': [function('Test_sorter_reverse')],
+  \   }
+  let SOURCE_S_R = {
+  \     'sorters': [function('ku#sorter#simple#sort'),
+  \                 function('Test_sorter_reverse')],
+  \   }
+  let SOURCE_SIMPLE = {
+  \     'sorters': [function('ku#sorter#simple#sort')],
+  \   }
+
+  It should return unsorted candidates with no sorter
+
+  Should Call('s:sort_lcandidates', copy(RAW_LCANDIDATES), ARGS, SOURCE_EMPTY)
+  \ ==# [
+  \ {'word': 'a'},
+  \ {'word': 'l'},
+  \ {'word': 'b'},
+  \ {'word': 'u'},
+  \ {'word': 'm'},
+  \ ]
+
+  It should return sorted candidates with a sorter
+
+  Should Call('s:sort_lcandidates', copy(RAW_LCANDIDATES), ARGS, SOURCE_SIMPLE)
+  \ ==# [
+  \ {'word': 'a'},
+  \ {'word': 'b'},
+  \ {'word': 'l'},
+  \ {'word': 'm'},
+  \ {'word': 'u'},
+  \ ]
+
+  It should return sorted candidates with a custom sorter
+
+  Should Call('s:sort_lcandidates', copy(RAW_LCANDIDATES), ARGS,SOURCE_REVERSE)
+  \ ==# [
+  \ {'word': 'm'},
+  \ {'word': 'u'},
+  \ {'word': 'b'},
+  \ {'word': 'l'},
+  \ {'word': 'a'},
+  \ ]
+
+  It should return candidates sorted by "simple" then sorted by "reverse"
+
+  Should Call('s:sort_lcandidates', copy(RAW_LCANDIDATES), ARGS, SOURCE_S_R)
+  \ ==# [
+  \ {'word': 'u'},
+  \ {'word': 'm'},
+  \ {'word': 'l'},
+  \ {'word': 'b'},
+  \ {'word': 'a'},
+  \ ]
+
+  ResetContext
+endfunction
+
+
+
+
+" __END__  "{{{1
+" vim: filetype=vim foldmethod=marker

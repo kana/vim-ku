@@ -1,0 +1,451 @@
+" Test: vim-ku-core action-common
+" Set up  "{{{1
+
+runtime! plugin/ku.vim plugin/ku/kind/common.vim
+call vspec#hint({'scope': 'ku#_local_variables()', 'sid': 'ku#_sid_prefix()'})
+
+
+function! Test_action_open(candidate)
+  edit `=a:candidate.word`
+  return 0
+endfunction
+
+
+call ku#define_source({
+\   'default_action_table': {'open': function('Test_action_open')},
+\   'gather_candidates': function('get'),
+\   'kinds': ['common'],
+\   'name': 'test',
+\ })
+
+
+SaveContext
+
+
+
+
+function s:describe__ku_action_common_Bottom__with_enough_room()  "{{{1
+  It should succeed
+
+  " Before action:
+  " ---------------------
+  " |         |         |
+  " |    3    |    2    |
+  " |(current)|         |
+  " |-------------------|
+  " |                   |
+  " |         1         |
+  " |                   |
+  " ---------------------
+  "
+  " After action:
+  " ---------------------
+  " |         |         |
+  " |    3    |    2    |
+  " |-------------------|
+  " |         1         |
+  " |-------------------|
+  " |         4         |
+  " |     (current)     |
+  " ---------------------
+
+  new
+  vnew
+  let original_bufnr = bufnr('')
+  let original_winrestcmd = winrestcmd()
+  Should tabpagenr() == 1
+  Should winnr('$') == 3
+  Should bufwinnr('') == 1
+
+  let candidate = {
+  \ 'ku__source': ku#available_sources()['test'],
+  \ 'word': 'something',
+  \ }
+  silent let _ = ku#action#common#Bottom(candidate)
+  Should _ is 0
+
+  Should tabpagenr() == 1
+  Should winnr('$') == 4
+  Should bufnr('') != original_bufnr
+  Should bufname('') ==# candidate.word
+  Should bufwinnr('') == 4
+  Should winrestcmd() !=# original_winrestcmd
+
+  It requires to reset side effect
+
+  only
+  bwipeout!
+
+  Should tabpagenr() == 1
+  Should winnr('$') == 1
+  Should bufnr('') != original_bufnr
+  Should bufname('') ==# ''
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_action_common_Bottom__without_enough_room()  "{{{1
+  It should fail
+
+  " Before action:
+  " ---------------------
+  " |         n         |
+  " |-------------------|
+  " |         :         |
+  " |-------------------|
+  " |         2         |
+  " |-------------------|
+  " |         1         |
+  " ---------------------
+  "
+  " After action:
+  " ---------------------
+  " |         n         |
+  " |-------------------|
+  " |         :         |
+  " |-------------------|
+  " |         2         |
+  " |-------------------|
+  " |         1         |
+  " ---------------------
+
+  let v:errmsg = ''
+  while v:errmsg == ''
+    silent! new
+    wincmd _
+  endwhile
+  let original_bufnr = bufnr('')
+  let original_winrestcmd = winrestcmd()
+  let original_winnr = winnr('$')
+  Should tabpagenr() == 1
+  Should bufwinnr('') == 1
+
+  let candidate = {
+  \ 'ku__source': ku#available_sources()['test'],
+  \ 'word': 'something',
+  \ }
+  silent let _ = ku#action#common#Bottom(candidate)
+  Should _ =~# 'E36: Not enough room'
+
+  Should tabpagenr() == 1
+  Should winnr('$') == original_winnr
+  Should bufnr('') == original_bufnr
+  Should bufname('') == ''
+  Should bufwinnr('') == 1
+  Should winrestcmd() ==# original_winrestcmd
+
+  It requires to reset side effect
+
+  only
+  bwipeout!
+
+  Should tabpagenr() == 1
+  Should winnr('$') == 1
+  Should bufnr('') == original_bufnr
+  Should bufname('') ==# ''
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_action_common_Left()  "{{{1
+  " FIXME: NIY
+  It should succeed if there is enough room
+  It should fail if there is not enough room
+endfunction
+
+
+
+
+function s:describe__ku_action_common_Right()  "{{{1
+  " FIXME: NIY
+  It should succeed if there is enough room
+  It should fail if there is not enough room
+endfunction
+
+
+
+
+function s:describe__ku_action_common_Top()  "{{{1
+  " FIXME: NIY
+  It should succeed if there is enough room
+  It should fail if there is not enough room
+endfunction
+
+
+
+
+function s:describe__ku_action_common_above()  "{{{1
+  " FIXME: NIY
+  It should succeed if there is enough room
+  It should fail if there is not enough room
+endfunction
+
+
+
+
+function s:describe__ku_action_common_below()  "{{{1
+  " FIXME: NIY
+  It should succeed if there is enough room
+  It should fail if there is not enough room
+endfunction
+
+
+
+
+function s:describe__ku_action_common_cancel()  "{{{1
+  It should always succeed
+
+  Should ku#action#common#cancel({}) == 0
+endfunction
+
+
+
+
+function s:describe__ku_action_common_cd()  "{{{1
+  let cwd_before = getcwd()
+
+  It should succeed to :cd to a directory
+  Should ku#action#common#cd({'word': 'vim'}) == 0
+  Should getcwd() ==# cwd_before . '/vim'
+
+  It should succeed to :cd to the directory which contains a file
+  Should ku#action#common#cd({'word': 'dot.vim/autoload/ku.vim'}) == 0
+  Should getcwd() ==# cwd_before . '/vim/dot.vim/autoload'
+
+  It should fail if there is no such directory
+  Should ku#action#common#cd({'word': 'project/rail-gun'}) != 0
+  Should getcwd() ==# cwd_before . '/vim/dot.vim/autoload'
+
+  It currently succeed if there is a directory but there is no such file
+  Should ku#action#common#cd({'word': 'ku/rail-gun'}) == 0
+  Should getcwd() ==# cwd_before . '/vim/dot.vim/autoload/ku'
+
+  " Reset side effect.
+  cd `=cwd_before`
+  Should getcwd() ==# cwd_before
+endfunction
+
+
+
+
+function s:describe__ku_action_common_default()  "{{{1
+  It should succeed
+
+  " Before action:
+  " ---------------------
+  " |    '' (unnamed)   |
+  " |     (current)     |
+  " ---------------------
+  "
+  " After action:
+  " ---------------------
+  " |    'something'    |
+  " |     (current)     |
+  " ---------------------
+
+  Should bufname('') ==# ''
+  Should bufwinnr('') == 1
+  Should tabpagenr() == 1
+  Should winnr('$') == 1
+  let original_bufnr = bufnr('')
+  let original_winrestcmd = winrestcmd()
+
+  let candidate = {
+  \ 'ku__source': ku#available_sources()['test'],
+  \ 'word': 'something',
+  \ }
+  silent let _ = ku#_take_action('default', candidate)
+  Should _ is 0
+
+  Should bufname('') ==# candidate.word
+  Should bufnr('') == original_bufnr
+  Should bufwinnr('') == 1
+  Should tabpagenr() == 1
+  Should winnr('$') == 1
+  Should winrestcmd() ==# original_winrestcmd
+
+  It requires to reset side effect
+
+  silent! only
+  bwipeout!
+
+  Should bufname('') ==# ''
+  Should bufnr('') != original_bufnr
+  Should bufwinnr('') == 1
+  Should tabpagenr() == 1
+  Should winnr('$') == 1
+  Should winrestcmd() ==# original_winrestcmd
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__ku_action_common_ex()  "{{{1
+  It should succeed with fnameescape(x) ==# x
+
+  Should ku#action#common#ex({'word': 'vim'}) == 0
+  Should nr2char(getchar(0)) ==# ':'
+  Should nr2char(getchar(0)) ==# ' '
+  Should nr2char(getchar(0)) ==# 'v'
+  Should nr2char(getchar(0)) ==# 'i'
+  Should nr2char(getchar(0)) ==# 'm'
+  Should nr2char(getchar(0)) ==# "\<C-b>"
+  Should nr2char(getchar(0)) ==# ''
+
+  It should succeed with fnameescape(x) !=# x
+
+  Should ku#action#common#ex({'word': 'v i'}) == 0
+  Should nr2char(getchar(0)) ==# ':'
+  Should nr2char(getchar(0)) ==# ' '
+  Should nr2char(getchar(0)) ==# 'v'
+  Should nr2char(getchar(0)) ==# "\\"
+  Should nr2char(getchar(0)) ==# ' '
+  Should nr2char(getchar(0)) ==# 'i'
+  Should nr2char(getchar(0)) ==# "\<C-b>"
+  Should nr2char(getchar(0)) ==# ''
+endfunction
+
+
+
+
+function s:describe__ku_action_common_lcd()  "{{{1
+
+  let cwd_before = getcwd()
+  split
+
+  It should succeed :lcd to a directory
+
+  Should ku#action#common#lcd({'word': 'vim'}) == 0
+  Should getcwd() ==# cwd_before . '/vim'
+  wincmd w
+  Should getcwd() ==# cwd_before
+  wincmd w
+
+  It should succeed to :lcd to the directory which contains a file
+
+  Should ku#action#common#lcd({'word': 'dot.vim/autoload/ku.vim'}) == 0
+  Should getcwd() ==# cwd_before . '/vim/dot.vim/autoload'
+  wincmd w
+  Should getcwd() ==# cwd_before
+  wincmd w
+
+  It should fail if there is no such directory
+
+  Should ku#action#common#lcd({'word': 'project/rail-gun'}) != 0
+  Should getcwd() ==# cwd_before . '/vim/dot.vim/autoload'
+  wincmd w
+  Should getcwd() ==# cwd_before
+  wincmd w
+
+  It currently succeed if there is a directory but there is no such file
+
+  Should ku#action#common#lcd({'word': 'ku/rail-gun'}) == 0
+  Should getcwd() ==# cwd_before . '/vim/dot.vim/autoload/ku'
+  wincmd w
+  Should getcwd() ==# cwd_before
+  wincmd w
+
+  " Reset side effect.
+  only
+  cd `=cwd_before`
+  Should getcwd() ==# cwd_before
+endfunction
+
+
+
+
+function s:describe__ku_action_common_left()  "{{{1
+  " FIXME: NIY
+  It should succeed if there is enough room
+  It should fail if there is not enough room
+endfunction
+
+
+
+
+function s:describe__ku_action_common_open()  "{{{1
+  It should always fail
+
+  " This action is a fallback to notice the action 'default' for a kind is not
+  " defined (because the action must be defined), so that it always fails.
+  Should ku#action#common#open({}) != 0
+endfunction
+
+
+
+
+function s:describe__ku_action_common_right()  "{{{1
+  " FIXME: NIY
+  It should succeed if there is enough room
+  It should fail if there is not enough room
+endfunction
+
+
+
+
+function s:describe__ku_action_common_select()  "{{{1
+  It should always succeed
+  " FIXME: NIY - until ku#restart() becomes functional.
+endfunction
+
+
+
+
+function s:describe__ku_action_common_tab_Left()  "{{{1
+  " FIXME: NIY
+  It should succeed if there is enough room
+  It should fail if there is not enough room
+endfunction
+
+
+
+
+function s:describe__ku_action_common_tab_Right()  "{{{1
+  " FIXME: NIY
+  It should succeed if there is enough room
+  It should fail if there is not enough room
+endfunction
+
+
+
+
+function s:describe__ku_action_common_tab_left()  "{{{1
+  " FIXME: NIY
+  It should succeed if there is enough room
+  It should fail if there is not enough room
+endfunction
+
+
+
+
+function s:describe__ku_action_common_tab_right()  "{{{1
+  " FIXME: NIY
+  It should succeed if there is enough room
+  It should fail if there is not enough room
+endfunction
+
+
+
+
+function s:describe__ku_action_common_yank()  "{{{1
+  It always succeed
+
+  let @0 = 'Samba'
+  Should ku#action#common#yank({'word': 'Somebody'}) == 0
+  Should @0 ==# 'Somebody'
+endfunction
+
+
+
+
+" __END__  "{{{1
+" vim: filetype=vim foldmethod=marker
+

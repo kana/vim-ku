@@ -1,0 +1,80 @@
+==== ku_omnifunc findstart 0
+---- It should return [] with no source 
+...
+---- It should return some candidate with a source 
+.....
+---- It should return some candidate with a source and a:base contains a prompt 
+....
+---- It requires to reset side effect 
+...
+
+==== ku_omnifunc findstart 1
+---- It requires the following initialization 
+..
+---- It should succeed with the default state (there is only the prompt) 
+..
+---- It should succeed with the prompt and some characters 
+..
+---- It should succeed with no character 
+..
+---- It should succeed with some characters but no prompt 
+..
+---- It requires to reset side effect 
+...
+
+==== s_filter_lcandidates 
+---- It should return candidates as-is with no filter 
+.
+---- It should return candidates filtered by M 
+.
+---- It should return candidates filtered by ODD 
+.
+---- It should return candidates filtered by M and ODD 
+.
+---- It should return the same candidates regardless of order of filters 
+.
+
+==== s_lcandidates_from_pattern 
+---- It should return [] with no source 
+.
+---- It should return some candidates with a source 
+.
+---- It should return some candidates with multiple sources 
+.
+---- It should return some candidates with multiple sources - duplicate sources 
+.
+---- It should return sorted candidates for a source with sorters 
+.
+---- It should return partially sorted candidates for sources with/without sorters 
+.
+
+==== s_matched_lcandidates 
+---- It should return nothing with no matcher 
+.
+---- It should return some candidates with the default matcher 
+.
+---- It should return some candidates with a custom matcher 
+.
+---- It should return some candidates matched with "default" or "odd" 
+.
+
+==== s_normalize_candidate 
+---- It should normalize a given candidate with a given source 
+..
+
+==== s_sort_lcandidates 
+---- It should return unsorted candidates with no sorter 
+.
+---- It should return sorted candidates with a sorter 
+.
+---- It should return sorted candidates with a custom sorter 
+.
+---- It should return candidates sorted by "simple" then sorted by "reverse" 
+.
+
+
+
+**** Result ****
+
+
+49 examples, 0 failures
