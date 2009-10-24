@@ -1,0 +1,30 @@
+==== ui_named_key_mappings choose action
+---- It requires the following initialization 
+.....
+---- It should work 
+..................
+---- It requires to reset side effect 
+....
+
+==== ui_named_key_mappings do default action
+---- It requires the following initialization 
+.....
+---- It should work 
+........
+---- It requires to reset side effect 
+....
+
+==== ui_named_key_mappings quit session
+---- It requires the following initialization 
+...
+---- It should work 
+......
+---- It requires to reset side effect 
+...
+
+
+
+**** Result ****
+
+
+56 examples, 0 failures

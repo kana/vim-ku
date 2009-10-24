@@ -1,0 +1,360 @@
+" Test: vim-ku-core core-internal-key
+runtime! plugin/ku.vim plugin/ku/kind/common.vim
+call vspec#hint({'scope': 'ku#_local_variables()', 'sid': 'ku#_sid_prefix()'})
+function s:describe__s_composite_key_table_from_kinds()  "{{{1
+  It requires the following initialization
+
+  " (composite) A a A B A a A b A a A B A a A
+  " kind_a cus  1   3   5   7   9   b   d   f
+  " kind_a def    2 3     6 7     a b     e f
+  " kind_b cus        4 5 6 7         c d e f
+  " kind_b def                8 9 a b c d e f
+
+  let kind_a = {
+  \   'default_action_table': {},
+  \   'default_key_table': {
+  \     '2': 'Ad',
+  \     '3': 'Ad',
+  \     '6': 'Ad',
+  \     '7': 'Ad',
+  \     'a': 'Ad',
+  \     'b': 'Ad',
+  \     'e': 'Ad',
+  \     'f': 'Ad',
+  \   },
+  \   'name': 'A',
+  \ }
+  let kind_b = {
+  \   'default_action_table': {},
+  \   'default_key_table': {
+  \     '8': 'Bd',
+  \     '9': 'Bd',
+  \     'a': 'Bd',
+  \     'b': 'Bd',
+  \     'c': 'Bd',
+  \     'd': 'Bd',
+  \     'e': 'Bd',
+  \     'f': 'Bd',
+  \   },
+  \   'name': 'B',
+  \ }
+  Should ku#define_kind(kind_a) == 1
+  Should ku#define_kind(kind_b) == 1
+  Should ku#custom_key(kind_a.name, '1', 'Ac') == 0
+  Should ku#custom_key(kind_a.name, '3', 'Ac') == 0
+  Should ku#custom_key(kind_a.name, '5', 'Ac') == 0
+  Should ku#custom_key(kind_a.name, '7', 'Ac') == 0
+  Should ku#custom_key(kind_a.name, '9', 'Ac') == 0
+  Should ku#custom_key(kind_a.name, 'b', 'Ac') == 0
+  Should ku#custom_key(kind_a.name, 'd', 'Ac') == 0
+  Should ku#custom_key(kind_a.name, 'f', 'Ac') == 0
+  Should ku#custom_key(kind_b.name, '4', 'Bc') == 0
+  Should ku#custom_key(kind_b.name, '5', 'Bc') == 0
+  Should ku#custom_key(kind_b.name, '6', 'Bc') == 0
+  Should ku#custom_key(kind_b.name, '7', 'Bc') == 0
+  Should ku#custom_key(kind_b.name, 'c', 'Bc') == 0
+  Should ku#custom_key(kind_b.name, 'd', 'Bc') == 0
+  Should ku#custom_key(kind_b.name, 'e', 'Bc') == 0
+  Should ku#custom_key(kind_b.name, 'f', 'Bc') == 0
+
+  It should return properly composite key tables for given kinds
+
+  Should Call('s:composite_key_table_from_kinds', [kind_a, kind_b])
+  \ == {
+  \   '1': 'Ac',
+  \   '2': 'Ad',
+  \   '3': 'Ac',
+  \   '4': 'Bc',
+  \   '5': 'Ac',
+  \   '6': 'Ad',
+  \   '7': 'Ac',
+  \   '8': 'Bd',
+  \   '9': 'Ac',
+  \   'a': 'Ad',
+  \   'b': 'Ac',
+  \   'c': 'Bc',
+  \   'd': 'Ac',
+  \   'e': 'Ad',
+  \   'f': 'Ac',
+  \ }
+
+  " Reset side effect.
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_custom_kind_key_table()  "{{{1
+  It should succeed with valid name "buffer"
+
+  let custom_buffer_key_table = Call('s:custom_kind_key_table', 'buffer')
+  Should custom_buffer_key_table ==# {}
+  Should Ref('s:custom_kind_key_tables') ==# {'buffer': {}}
+  let custom_buffer_key_table_2 = Call('s:custom_kind_key_table', 'buffer')
+  Should custom_buffer_key_table is custom_buffer_key_table_2
+  Should Ref('s:custom_kind_key_tables') ==# {'buffer': {}}
+
+  It currently accept invalid name "!@#$%"
+
+  let custom_xxxxx_key_table = Call('s:custom_kind_key_table', '!@#$%')
+  Should custom_xxxxx_key_table ==# {}
+  Should Ref('s:custom_kind_key_tables') ==# {'buffer': {}, '!@#$%': {}}
+  let custom_xxxxx_key_table_2 = Call('s:custom_kind_key_table', '!@#$%')
+  Should custom_xxxxx_key_table is custom_xxxxx_key_table_2
+  Should Ref('s:custom_kind_key_tables') ==# {'buffer': {}, '!@#$%': {}}
+
+  It should create different tables for different kinds
+
+  Should custom_buffer_key_table isnot custom_xxxxx_key_table
+
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_default_kind_key_table()  "{{{1
+  It should return {} for a kind which is not defined
+
+  Should Call('s:default_kind_key_table', 'buffer') ==# {}
+
+  It should return the default key table
+
+  let kind_a = {
+  \ 'default_action_table': {'close': function('type')},
+  \ 'default_key_table': {'c': 'close'},
+  \ 'name': 'buffer',
+  \ }
+  Should ku#define_kind(kind_a) == 1
+
+  Should Call('s:default_kind_key_table', 'buffer') ==# {'c': 'close'}
+  Should Call('s:default_kind_key_table', 'buffer') is kind_a.default_key_table
+
+  " Reset side effect.
+  ResetContext
+endfunction
+
+
+
+
+function s:describe__s_get_char__with_0()  "{{{1
+  It requires that there is no character in the typeahead buffer
+
+  let typeahead = ''
+  while getchar(1) isnot 0
+    let typeahead .= getchar()
+  endwhile
+
+  Should typeahead ==# ''
+
+  It should return empty values if there is no character
+
+  let _ = Call('s:get_char', 0)
+  Should _.s ==# ''
+  Should _.cs ==# []
+  Should _.bs ==# []
+  Should getchar(0) ==# 0
+
+  It should consume a character if there is a character
+
+  call feedkeys('a')
+  let _ = Call('s:get_char', 0)
+  Should _.s ==# 'a'
+  Should _.cs ==# ['a']
+  Should _.bs ==# [char2nr('a')]
+  Should getchar(0) ==# 0
+endfunction
+
+
+
+
+function s:describe__s_get_char__with_1()  "{{{1
+  It requires that there is no character in the typeahead buffer
+
+  let typeahead = ''
+  while getchar(1) isnot 0
+    let typeahead .= getchar()
+  endwhile
+
+  Should typeahead ==# ''
+
+  It should return empty values if there is no character
+
+  let _ = Call('s:get_char', 1)
+  Should _.s ==# ''
+  Should _.cs ==# []
+  Should _.bs ==# []
+  Should getchar(0) ==# 0
+
+  It should not consume a character if there is a character
+
+  call feedkeys('a')
+  let _ = Call('s:get_char', 1)
+  Should _.s ==# 'a'
+  Should _.cs ==# ['a']
+  Should _.bs ==# [char2nr('a')]
+  Should getchar(0) ==# char2nr('a')
+  Should getchar(0) ==# 0
+endfunction
+
+
+
+
+function s:describe__s_get_char__without_argument()  "{{{1
+  It requires that there is no character in the typeahead buffer
+
+  let typeahead = ''
+  while getchar(1) isnot 0
+    let typeahead .= getchar()
+  endwhile
+
+  Should typeahead ==# ''
+
+  It should return valid result for an ordinary character
+
+  call feedkeys('a')
+  let _ = Call('s:get_char')
+  Should _.s ==# 'a'
+  Should _.cs ==# ['a']
+  Should _.bs ==# [char2nr('a')]
+  Should getchar(0) ==# 0
+
+  It should return valid result for a special character such as <F1>
+
+  call feedkeys("\<F1>")
+  let _ = Call('s:get_char')
+  Should _.s ==# "\<F1>"
+  Should _.cs ==# map(range(len("\<F1>")), '"\<F1>"[v:val]')
+  Should _.bs ==# map(range(len("\<F1>")), 'char2nr("\<F1>"[v:val])')
+  Should getchar(0) ==# 0
+
+  It should return valid result for <Esc> which is part of <Esc>{x}
+
+  call feedkeys("\<Esc>x")
+  let _ = Call('s:get_char')
+  Should _.s ==# "\<Esc>"
+  Should _.cs ==# ["\<Esc>"]
+  Should _.bs ==# [char2nr("\<Esc>")]
+  Should nr2char(getchar(0)) ==# 'x'
+  Should nr2char(getchar(0)) ==# ''
+
+  It should return valid result for a multibyte character
+
+  set encoding=utf-8
+  call feedkeys("\u3042")  " = Japanese Hiragana 'A'
+  let _ = Call('s:get_char')
+  Should _.s ==# "\xE3\x81\x82"
+  Should _.cs ==# ["\xE3", "\x81", "\x82"]
+  Should _.bs ==# [0xE3, 0x81, 0x82]
+  Should getchar(0) ==# 0
+  set encoding&
+endfunction
+
+
+
+
+function s:describe__s_get_key()  "{{{1
+  It requires that there is no character in the typeahead buffer
+
+  let typeahead = ''
+  while getchar(1) isnot 0
+    let typeahead .= getchar()
+  endwhile
+
+  Should typeahead ==# ''
+
+  It should return an ordinary key in the typeahead buffer
+
+  call feedkeys('a')
+  Should Call('s:get_key') ==# 'a'
+
+  It should return one character in the typeahead buffer
+
+  call feedkeys('Sasara')
+  Should Call('s:get_key') ==# 'S'
+  Should nr2char(getchar(0)) ==# 'a'
+  Should nr2char(getchar(0)) ==# 's'
+  Should nr2char(getchar(0)) ==# 'a'
+  Should nr2char(getchar(0)) ==# 'r'
+  Should nr2char(getchar(0)) ==# 'a'
+  Should nr2char(getchar(0)) ==# ''
+
+  It should return a special key in the typeahead buffer
+
+  call feedkeys("\<F1>")
+  Should Call('s:get_key') ==# "\<F1>"
+
+  It should return <Esc> if it is solely typed
+
+  call feedkeys("\<Esc>")
+  Should Call('s:get_key') ==# "\<Esc>"
+  Should nr2char(getchar(0)) ==# ''
+
+  It should return <Esc>{x} as a single key stroke
+
+  call feedkeys("\<Esc>Alter")
+  Should Call('s:get_key') ==# "\<Esc>A"
+  Should nr2char(getchar(0)) ==# 'l'
+  Should nr2char(getchar(0)) ==# 't'
+  Should nr2char(getchar(0)) ==# 'e'
+  Should nr2char(getchar(0)) ==# 'r'
+  Should nr2char(getchar(0)) ==# ''
+
+  It should return a multibyte character as a single key stroke
+
+  set encoding=utf-8
+  call feedkeys("\u3055\u3055\u3089")  " = Japanese Hiraganas: Sa Sa Ra
+  Should Call('s:get_key') ==# "\xE3\x81\x95"
+  Should nr2char(getchar(0)) ==# "\xE3\x81\x95"
+  Should nr2char(getchar(0)) ==# "\xE3\x82\x89"
+  Should nr2char(getchar(0)) ==# ''
+  set encoding&
+endfunction
+
+
+
+
+function s:describe__s_list_key_tables()  "{{{1
+  It requires the following initialization
+
+  let kind_a = {
+  \   'default_action_table': {'default': function('type')},
+  \   'default_key_table': {'d': 'default'},
+  \   'name': 'A',
+  \ }
+  let kind_b = {
+  \   'default_action_table': {'default': function('get')},
+  \   'default_key_table': {'d': 'default'},
+  \   'name': 'B',
+  \ }
+  let kind_c = {
+  \   'default_action_table': {'default': function('len')},
+  \   'default_key_table': {'d': 'default'},
+  \   'name': 'C',
+  \ }
+  Should ku#define_kind(kind_a) == 1
+  Should ku#define_kind(kind_b) == 1
+  Should ku#define_kind(kind_c) == 1
+
+  It should return key tables for given kinds in proper order
+
+  Should Call('s:list_key_tables', [kind_a, kind_b, kind_c])
+  \ == [
+  \    Call('s:custom_kind_key_table', kind_a.name),
+  \    Call('s:default_kind_key_table', kind_a.name),
+  \    Call('s:custom_kind_key_table', kind_b.name),
+  \    Call('s:default_kind_key_table', kind_b.name),
+  \    Call('s:custom_kind_key_table', kind_c.name),
+  \    Call('s:default_kind_key_table', kind_c.name),
+  \ ]
+
+  " Reset side effect.
+  ResetContext
+endfunction
+
+
+
+
+" __END__  "{{{1
+" vim: filetype=vim foldmethod=marker
